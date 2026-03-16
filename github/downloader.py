@@ -3,7 +3,7 @@ from output import output_issue
 from argparse import ArgumentParser
 
 parser = ArgumentParser(prog='downloader.py')
-parser.add_argument('-r', '--repository', required=True, help="Which repository to download the issues from")
+parser.add_argument('-r', '--repository', required=True, help="Which repository to download the issues from (format: owner/repo)")
 args = parser.parse_args()
 
 per_page = 100
