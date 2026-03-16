@@ -1,0 +1,18 @@
+[project]
+name = "scrape-gitlab"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "requests",
+    "tomlkit",
+]
+
+[project.scripts]
+scrape-gitlab = "scrape_gitlab.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["scrape_gitlab"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

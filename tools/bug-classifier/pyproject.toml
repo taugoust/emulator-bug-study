@@ -1,0 +1,18 @@
+[project]
+name = "bug-classifier"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "transformers[torch]",
+    "ollama",
+]
+
+[project.scripts]
+bug-classifier = "bug_classifier.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["bug_classifier"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

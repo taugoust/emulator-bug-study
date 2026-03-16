@@ -1,0 +1,19 @@
+[project]
+name = "scrape-mailinglist"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "requests",
+    "beautifulsoup4",
+    "html5lib",
+]
+
+[project.scripts]
+scrape-mailinglist = "scrape_mailinglist.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["scrape_mailinglist"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

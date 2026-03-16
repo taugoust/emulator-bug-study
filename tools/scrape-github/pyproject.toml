@@ -1,0 +1,17 @@
+[project]
+name = "scrape-github"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "requests",
+]
+
+[project.scripts]
+scrape-github = "scrape_github.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["scrape_github"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

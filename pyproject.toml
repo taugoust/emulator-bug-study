@@ -1,0 +1,20 @@
+[project]
+name = "bug-study-utils"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.uv]
+managed = true
+
+[tool.uv.workspace]
+members = ["tools/*"]
+
+[dependency-groups]
+dev = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["bug_study_utils"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

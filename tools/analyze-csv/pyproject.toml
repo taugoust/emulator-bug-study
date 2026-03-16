@@ -1,0 +1,15 @@
+[project]
+name = "analyze-csv"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+analyze-csv = "analyze_csv.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["analyze_csv"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
