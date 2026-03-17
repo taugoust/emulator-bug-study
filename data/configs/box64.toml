@@ -1,0 +1,4 @@
+[categories]
+positive = ["semantic", "dynarec", "assembly", "mistranslation", "register", "opcode", "syscall"]
+negative = ["build", "crash", "performance", "compatibility", "android", "wine", "steam", "graphics", "audio", "other"]
+architectures = ["x86", "arm", "risc-v", "aarch64"]
