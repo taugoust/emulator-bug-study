@@ -80,3 +80,34 @@ class OllamaBackend(ClassifierBackend):
             scores=[],
             reasoning=raw,
         )
+
+
+class AnthropicBackend(ClassifierBackend):
+    """Classification via the Anthropic Messages API."""
+
+    def __init__(self, model: str, preamble: str, max_tokens: int = 1024):
+        from anthropic import Anthropic
+
+        self.client = Anthropic()  # uses ANTHROPIC_API_KEY env var
+        self.model = model
+        self.preamble = preamble
+        self.max_tokens = max_tokens
+
+    def classify(self, text: str, categories: list[str], **kwargs) -> ClassificationResult:
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=self.max_tokens,
+            system=self.preamble,
+            messages=[{"role": "user", "content": text}],
+        )
+        raw = response.content[0].text
+        category = sub(r'[^a-zA-Z]', '', raw.split()[-1]).lower()
+        if category not in categories:
+            category = "manual-review"
+
+        return ClassificationResult(
+            category=category,
+            labels=[],
+            scores=[],
+            reasoning=raw,
+        )

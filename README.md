@@ -55,8 +55,8 @@ The workflow consists of three stages:
 1. **Scraping** — Bug reports are downloaded from issue trackers and mailing lists. Each bug is
    stored as a single plain-text file containing its title and description. All scrapers also
    support `--jsonl` to emit one JSON object per line to stdout for piping between tools.
-2. **Classification** — Each bug file is fed to a classifier (either a zero-shot NLI model or a
-   local LLM via Ollama) that assigns it to a category defined by the user.
+2. **Classification** — Each bug file is fed to a classifier that assigns it to a category defined by
+   the user. Multiple backends are supported: HuggingFace zero-shot NLI, Ollama, and Anthropic.
 3. **Analysis** — Helper scripts count bugs per category, compare classification runs, and
    cross-reference results.
 
@@ -120,21 +120,20 @@ scrape-mailinglist -u https://lists.nongnu.org/archive/html/qemu-devel --start 2
 
 #### bug-classifier
 
-Reads scraped bug files and assigns each one to a category. Supports HuggingFace zero-shot NLI
-models and local LLMs via Ollama.
+Reads scraped bug files and assigns each one to a category. The `--backend` flag selects the
+classification engine:
 
 ```
-# Zero-shot classification
-bug-classifier -i bugs/ -o output/ --model facebook/bart-large-mnli
+# Zero-shot NLI (default)
+bug-classifier --backend zero-shot -i bugs/ -o output/
+bug-classifier --backend zero-shot -i bugs/ -o output/ --model facebook/bart-large-mnli --multi-label
+bug-classifier --backend zero-shot -i bugs/ -o output/ --compare
 
-# With multi-label mode
-bug-classifier -i bugs/ -o output/ --multi-label
+# Local LLM via Ollama
+bug-classifier --backend ollama --model deepseek-r1:32b --preamble data/prompts/classify.txt -i bugs/ -o output/
 
-# With a second model for cross-validation
-bug-classifier -i bugs/ -o output/ --compare
-
-# Using a local LLM via Ollama
-bug-classifier -i bugs/ -o output/ --ollama deepseek-r1:32b --preamble data/prompts/classify.txt
+# Anthropic API (requires ANTHROPIC_API_KEY)
+bug-classifier --backend anthropic --model claude-sonnet-4-20250514 --preamble data/prompts/classify.txt -i bugs/ -o output/
 ```
 
 Multiple input directories can be specified by repeating `-i`.
@@ -144,7 +143,7 @@ are tuned for QEMU.
 
 **Output:**
 - `<output-dir>/<category>/<bug_id>` — Classification scores and the original bug text.
-- `<parent-of-output-dir>/reasoning/<category>/<bug_id>` — LLM reasoning (Ollama mode only).
+- `<parent-of-output-dir>/reasoning/<category>/<bug_id>` — LLM reasoning (Ollama/Anthropic only).
 
 #### Preambles
 

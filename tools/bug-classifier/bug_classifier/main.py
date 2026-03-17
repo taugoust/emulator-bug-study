@@ -76,7 +76,7 @@ def main():
     parser.add_argument('-i', '--input-dir', required=True, action='append', help="Input directory containing bug files (repeatable)")
     parser.add_argument('-o', '--output-dir', default='output', help="Output directory (default: output)")
 
-    parser.add_argument('--backend', choices=['zero-shot', 'ollama'], default='zero-shot', help="Classification backend (default: zero-shot)")
+    parser.add_argument('--backend', choices=['zero-shot', 'ollama', 'anthropic'], default='zero-shot', help="Classification backend (default: zero-shot)")
     parser.add_argument('--model', type=str, help="Model name (default depends on backend)")
     parser.add_argument('--preamble', type=str, help="Path to preamble/prompt file (required for ollama)")
     parser.add_argument('--compare', nargs='?', const="MoritzLaurer/deberta-v3-large-zeroshot-v2.0", type=str, help="Second model for cross-validation (zero-shot only)")
@@ -117,6 +117,16 @@ def main():
         with open(args.preamble, "r") as file:
             preamble = file.read()
         backend = OllamaBackend(model=model, preamble=preamble)
+        print(f"The model {model} will be used")
+
+    elif args.backend == 'anthropic':
+        from bug_classifier.backend import AnthropicBackend
+        if not args.preamble:
+            parser.error("--preamble is required when using --backend anthropic")
+        model = args.model or "claude-sonnet-4-20250514"
+        with open(args.preamble, "r") as file:
+            preamble = file.read()
+        backend = AnthropicBackend(model=model, preamble=preamble)
         print(f"The model {model} will be used")
 
     processed_bugs = list_files_recursive(args.output_dir, True)

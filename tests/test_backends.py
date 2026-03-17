@@ -154,3 +154,61 @@ class TestOllamaBackend:
         content = mock_chat.call_args[0][1][0]['content']
         assert "bug text" in content
         assert "MY PREAMBLE" in content
+
+
+class TestAnthropicBackend:
+    def _make_backend(self, response_text):
+        """Create an AnthropicBackend with a mocked Anthropic client."""
+        mock_message = MagicMock()
+        mock_message.content = [MagicMock(text=response_text)]
+
+        mock_client = MagicMock()
+        mock_client.messages.create.return_value = mock_message
+
+        fake_anthropic = MagicMock()
+        fake_anthropic.Anthropic.return_value = mock_client
+
+        ctx = patch.dict(sys.modules, {"anthropic": fake_anthropic})
+        ctx.start()
+        from bug_classifier.backend import AnthropicBackend
+        backend = AnthropicBackend(model="claude-test", preamble="classify this")
+        ctx.stop()
+
+        return backend, mock_client
+
+    def test_valid_category(self):
+        backend, _ = self._make_backend('The category is network')
+        result = backend.classify("some bug", CATEGORIES)
+
+        assert result.category == 'network'
+        assert result.labels == []
+        assert result.scores == []
+        assert result.reasoning == 'The category is network'
+
+    def test_unknown_category_falls_back(self):
+        backend, _ = self._make_backend('I think this is a banana')
+        result = backend.classify("some bug", CATEGORIES)
+
+        assert result.category == 'manual-review'
+
+    def test_strips_non_alpha(self):
+        backend, _ = self._make_backend('Result: **boot**!')
+        result = backend.classify("some bug", CATEGORIES)
+
+        assert result.category == 'boot'
+
+    def test_preamble_sent_as_system(self):
+        backend, mock_client = self._make_backend('network')
+        backend.classify("bug text", CATEGORIES)
+
+        call_kwargs = mock_client.messages.create.call_args[1]
+        assert call_kwargs['system'] == 'classify this'
+        assert call_kwargs['messages'][0]['content'] == 'bug text'
+        assert call_kwargs['messages'][0]['role'] == 'user'
+
+    def test_model_passed_through(self):
+        backend, mock_client = self._make_backend('network')
+        backend.classify("bug text", CATEGORIES)
+
+        call_kwargs = mock_client.messages.create.call_args[1]
+        assert call_kwargs['model'] == 'claude-test'
