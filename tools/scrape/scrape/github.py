@@ -1,7 +1,7 @@
 """GitHub issue scraping logic."""
 
-from requests import get
-from buglib import pages_iterator, write_file, write_jsonl
+import os
+from buglib import github_session, pages_iterator, write_file, write_jsonl
 
 
 def output_issue(issue: dict, output_dir: str = "issues") -> None:
@@ -16,14 +16,16 @@ def output_issue(issue: dict, output_dir: str = "issues") -> None:
 
 
 def scrape(repository: str, output_dir: str, jsonl: bool) -> None:
+    session = github_session(os.environ.get("GITHUB_TOKEN"))
+
     per_page = 100
     url = f"https://api.github.com/repos/{repository}/issues?per_page={per_page}&state=all"
     check_url = f"https://api.github.com/repos/{repository}"
 
-    check = get(check_url)
+    check = session.get(check_url)
     check.raise_for_status()
 
-    for index, response in enumerate(pages_iterator(get(url))):
+    for index, response in enumerate(pages_iterator(session.get(url), session=session)):
         if not jsonl:
             print(f"Current page: {index+1}")
 

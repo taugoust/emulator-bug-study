@@ -1,7 +1,10 @@
 import pytest
 import os
 import tempfile
+from unittest.mock import MagicMock, patch
 from buglib.files import write_file, list_files_recursive
+from buglib.github import github_session
+from buglib.pagination import pages_iterator
 
 
 class TestWriteFile:
@@ -58,3 +61,64 @@ class TestListFilesRecursive:
         with tempfile.TemporaryDirectory() as tmpdir:
             result = list_files_recursive(tmpdir)
             assert result == []
+
+
+class TestGithubSession:
+    def test_with_token_sets_auth_header(self):
+        session = github_session("mytoken")
+        assert session.headers["Authorization"] == "Bearer mytoken"
+
+    def test_without_token_no_auth_header(self):
+        session = github_session(None)
+        assert "Authorization" not in session.headers
+
+    def test_empty_token_no_auth_header(self):
+        # GITHUB_TOKEN=$(gh auth token ...) yields "" when gh is not set up
+        session = github_session("")
+        assert "Authorization" not in session.headers
+
+    def test_without_token_warns(self, capsys):
+        github_session(None)
+        err = capsys.readouterr().err
+        assert "Warning" in err
+        assert "GITHUB_TOKEN" in err
+
+    def test_empty_token_warns(self, capsys):
+        github_session("")
+        err = capsys.readouterr().err
+        assert "Warning" in err
+        assert "GITHUB_TOKEN" in err
+
+    def test_with_token_no_warning(self, capsys):
+        github_session("mytoken")
+        assert capsys.readouterr().err == ""
+
+
+def _mock_response(has_next: bool) -> MagicMock:
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.links = {"next": {"url": "https://api.github.com/page2"}} if has_next else {}
+    return response
+
+
+class TestPagesIteratorSession:
+    def test_session_used_for_next_page(self):
+        first = _mock_response(has_next=True)
+        second = _mock_response(has_next=False)
+        session = MagicMock()
+        session.get.return_value = second
+
+        pages = list(pages_iterator(first, session=session))
+
+        assert len(pages) == 2
+        session.get.assert_called_once_with(url="https://api.github.com/page2")
+
+    def test_without_session_uses_requests_get(self):
+        first = _mock_response(has_next=True)
+        second = _mock_response(has_next=False)
+
+        with patch("requests.get", return_value=second) as mock_get:
+            pages = list(pages_iterator(first))
+
+        assert len(pages) == 2
+        mock_get.assert_called_once_with(url="https://api.github.com/page2")
