@@ -1,0 +1,4 @@
+[categories]
+positive = ["semantic", "TCG", "assembly", "architecture", "mistranslation", "register", "user-level"]
+negative = ["boot", "network", "kvm", "vnc", "graphic", "device", "socket", "debug", "files", "PID", "permissions", "performance", "kernel", "peripherals", "VMM", "hypervisor", "virtual", "other"]
+architectures = ["x86", "arm", "risc-v", "i386", "ppc"]

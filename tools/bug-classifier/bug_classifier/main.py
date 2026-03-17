@@ -82,14 +82,22 @@ def main():
     parser.add_argument('--compare', nargs='?', const="MoritzLaurer/deberta-v3-large-zeroshot-v2.0", type=str, help="Second model for cross-validation (zero-shot only)")
     parser.add_argument('-m', '--multi-label', action='store_true', help="Enable multi-label classification (zero-shot only)")
 
+    parser.add_argument('--config', type=str, help="Path to TOML category config file (overrides --positive/--negative/--architectures)")
     parser.add_argument('--positive', nargs='+', default=['semantic', 'TCG', 'assembly', 'architecture', 'mistranslation', 'register', 'user-level'], help="Positive category labels")
     parser.add_argument('--negative', nargs='+', default=['boot', 'network', 'kvm', 'vnc', 'graphic', 'device', 'socket', 'debug', 'files', 'PID', 'permissions', 'performance', 'kernel', 'peripherals', 'VMM', 'hypervisor', 'virtual', 'other'], help="Negative category labels")
     parser.add_argument('--architectures', nargs='+', default=['x86', 'arm', 'risc-v', 'i386', 'ppc'], help="Architecture labels")
     args = parser.parse_args()
 
-    positive_categories = args.positive
-    negative_categories = args.negative
-    architectures = args.architectures
+    if args.config:
+        from bug_classifier.config import load_config
+        cfg = load_config(args.config)
+        positive_categories = cfg.positive
+        negative_categories = cfg.negative
+        architectures = cfg.architectures
+    else:
+        positive_categories = args.positive
+        negative_categories = args.negative
+        architectures = args.architectures
     categories = positive_categories + negative_categories + architectures
 
     start_time = monotonic()

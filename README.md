@@ -138,8 +138,13 @@ bug-classifier --backend anthropic --model claude-sonnet-4-20250514 --preamble d
 
 Multiple input directories can be specified by repeating `-i`.
 
-Categories are configured via `--positive`, `--negative`, and `--architectures` flags. The defaults
-are tuned for QEMU.
+Categories are configured via a TOML file or CLI flags. A QEMU configuration is included:
+
+```
+bug-classify --config data/configs/qemu.toml --backend zero-shot -i bugs/ -o output/
+```
+
+Alternatively, pass categories directly with `--positive`, `--negative`, and `--architectures`.
 
 **Output:**
 - `<output-dir>/<category>/<bug_id>` — Classification scores and the original bug text.
