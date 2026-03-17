@@ -10,7 +10,7 @@ managed = true
 members = ["tools/*"]
 
 [dependency-groups]
-dev = []
+dev = ["pytest"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["bug_study_utils"]

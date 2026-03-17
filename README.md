@@ -30,6 +30,19 @@ uv sync
 uv run scrape-github -r owner/repo
 ```
 
+## Testing
+
+```
+nix flake check
+```
+
+Or in a development shell:
+
+```
+nix develop
+pytest tests/ -v
+```
+
 ## Architecture
 
 The workflow consists of three stages:

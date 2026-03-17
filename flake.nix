@@ -60,6 +60,8 @@
         )
       );
 
+      devDeps = workspace.deps.all // { bug-study-utils = [ "dev" ]; };
+
       mkApp = system: name: description: {
         type = "app";
         program = "${pythonSets.${system}.mkVirtualEnv "${name}-env" { ${name} = [ ]; }}/bin/${name}";
@@ -94,12 +96,27 @@
         word-count = mkApp system "word-count" "Report word count statistics for bug report files";
       });
 
+      checks = forAllSystems (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+          testEnv = pythonSets.${system}.mkVirtualEnv "bug-study-test-env" devDeps;
+        in
+        {
+          pytest = pkgs.runCommand "pytest" { } ''
+            cd ${./.}
+            ${testEnv}/bin/pytest tests/ -v
+            touch $out
+          '';
+        }
+      );
+
       devShells = forAllSystems (
         system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
           pythonSet = pythonSets.${system}.overrideScope editableOverlay;
-          virtualenv = pythonSet.mkVirtualEnv "bug-study-dev-env" workspace.deps.all;
+          virtualenv = pythonSet.mkVirtualEnv "bug-study-dev-env" devDeps;
         in
         {
           default = pkgs.mkShell {
