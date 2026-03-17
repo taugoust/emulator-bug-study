@@ -1,19 +1,22 @@
-"""Unified scraper for GitHub and GitLab issues."""
+"""Unified scraper for GitHub, GitLab, and mailing list archives."""
 
 from argparse import ArgumentParser
-from urllib.parse import urlparse
+from datetime import datetime
+from urllib.parse import urlparse, quote
 from requests import get
 
 
 def detect_source(url: str) -> str:
-    """Detect whether a URL points to GitHub or GitLab."""
+    """Detect whether a URL points to GitHub, GitLab, or a mailing list."""
     host = urlparse(url).hostname or ""
     if "github.com" in host:
         return "github"
     elif "gitlab.com" in host:
         return "gitlab"
+    elif host:
+        return "mailinglist"
     else:
-        raise ValueError(f"Cannot detect source from URL: {url} (expected github.com or gitlab.com)")
+        raise ValueError(f"Cannot detect source from URL: {url}")
 
 
 def parse_github_url(url: str) -> str:
@@ -28,26 +31,19 @@ def parse_github_url(url: str) -> str:
 def resolve_gitlab_project_id(url: str) -> int:
     """Resolve a GitLab project ID from a URL.
 
-    Accepts either an API URL with a numeric ID
-    (``https://gitlab.com/api/v4/projects/11167699``) or a human-readable
-    path (``https://gitlab.com/qemu-project/qemu``), in which case the
-    GitLab API is queried to look up the numeric ID.
+    Accepts either an API URL with a numeric ID or a human-readable path,
+    in which case the GitLab API is queried to look up the numeric ID.
     """
     parsed = urlparse(url)
     path = parsed.path.strip("/")
 
-    # Check for numeric ID in the URL
     for segment in reversed(path.split("/")):
         if segment.isdigit():
             return int(segment)
 
-    # Remove common prefixes
     for prefix in ("api/v4/projects/",):
         if path.startswith(prefix):
             path = path[len(prefix):]
-
-    # URL-encode the path and look up the project
-    from urllib.parse import quote
 
     encoded = quote(path, safe="")
     response = get(f"https://{parsed.hostname}/api/v4/projects/{encoded}")
@@ -56,23 +52,33 @@ def resolve_gitlab_project_id(url: str) -> int:
 
 
 def main():
-    parser = ArgumentParser(prog='scrape-git')
-    parser.add_argument('url', help="Repository URL (GitHub or GitLab)")
+    parser = ArgumentParser(prog='scrape')
+    parser.add_argument('url', help="Source URL (GitHub, GitLab, or mailing list archive)")
     parser.add_argument('-o', '--output-dir', default='issues', help="Output directory (default: issues)")
     parser.add_argument('--jsonl', action='store_true', help="Write JSONL to stdout instead of individual files")
+    parser.add_argument('--start', type=str, help="Start month YYYY-MM (mailing list only)")
+    parser.add_argument('--end', type=str, help="End month YYYY-MM (mailing list only)")
     args = parser.parse_args()
 
     source = detect_source(args.url)
 
     if source == "github":
-        from scrape_git.github import scrape
+        from scrape.github import scrape
         repository = parse_github_url(args.url)
         scrape(repository, args.output_dir, args.jsonl)
 
     elif source == "gitlab":
-        from scrape_git.gitlab import scrape
+        from scrape.gitlab import scrape
         project_id = resolve_gitlab_project_id(args.url)
         scrape(project_id, args.output_dir, args.jsonl)
+
+    elif source == "mailinglist":
+        from scrape.mailinglist import scrape
+        if not args.start or not args.end:
+            parser.error("--start and --end are required for mailing list scraping")
+        start_date = datetime.strptime(args.start, "%Y-%m")
+        end_date = datetime.strptime(args.end, "%Y-%m")
+        scrape(args.url, start_date, end_date, args.output_dir, args.jsonl)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from scrape_mailinglist.main import is_bug, months_iterator
+from scrape.mailinglist import is_bug, months_iterator
 
 
 class TestIsBug:

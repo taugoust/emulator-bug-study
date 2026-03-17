@@ -18,7 +18,7 @@ utilities live in `lib/buglib/`.
 Run any tool directly:
 
 ```
-nix run .#scrape-git -- https://github.com/owner/repo -o issues/
+nix run .#scrape -- https://github.com/owner/repo -o issues/
 nix run .#bug-classifier -- -i bugs/ -o output/
 ```
 
@@ -32,7 +32,7 @@ nix develop
 
 ```
 uv sync
-uv run scrape-git https://github.com/owner/repo
+uv run scrape https://github.com/owner/repo
 ```
 
 ## Testing
@@ -84,31 +84,29 @@ All scrapers support two output modes:
 - **JSONL mode** (`--jsonl`) — writes one JSON object per line to stdout. Progress messages are
   suppressed to keep stdout clean.
 
-#### scrape-git
+#### scrape
 
-Downloads issues from GitHub or GitLab, auto-detected from the URL. For GitLab, structured issue
-descriptions (host/guest OS, architecture, reproduction steps) are parsed and both TOML metadata and
-plain-text files are written, organized by label.
+Downloads bug reports from GitHub, GitLab, or mailing list archives. The source is auto-detected
+from the URL.
 
 ```
 # GitHub
-scrape-git https://github.com/owner/repo -o issues/
-scrape-git https://github.com/owner/repo --jsonl > issues.jsonl
+scrape https://github.com/owner/repo -o issues/
+scrape https://github.com/owner/repo --jsonl > issues.jsonl
 
 # GitLab (project ID resolved automatically)
-scrape-git https://gitlab.com/qemu-project/qemu -o output/
-scrape-git https://gitlab.com/qemu-project/qemu --jsonl > issues.jsonl
+scrape https://gitlab.com/qemu-project/qemu -o output/
+scrape https://gitlab.com/qemu-project/qemu --jsonl > issues.jsonl
+
+# Mailing list (requires --start and --end)
+scrape https://lists.nongnu.org/archive/html/qemu-devel --start 2015-04 --end 2025-05 -o output/
+scrape https://lists.nongnu.org/archive/html/qemu-devel --start 2015-04 --end 2025-05 --jsonl > bugs.jsonl
 ```
 
-#### scrape-mailinglist
-
-Scrapes mailing list archives for threads whose subject contains `[BUG]` or `[Bug <number>]`.
-Threads referencing Launchpad bugs are followed and downloaded separately.
-
-```
-scrape-mailinglist -u https://lists.nongnu.org/archive/html/qemu-devel --start 2015-04 --end 2025-05 -o output/
-scrape-mailinglist -u https://lists.nongnu.org/archive/html/qemu-devel --start 2015-04 --end 2025-05 --jsonl > bugs.jsonl
-```
+For GitLab, structured issue descriptions (host/guest OS, architecture, reproduction steps) are
+parsed and both TOML metadata and plain-text files are written, organized by label. For mailing
+lists, threads whose subject contains `[BUG]` or `[Bug <number>]` are scraped, and Launchpad bug
+references are followed and downloaded separately.
 
 ### Classification
 

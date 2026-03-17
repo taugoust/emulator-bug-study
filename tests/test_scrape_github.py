@@ -1,7 +1,7 @@
 import pytest
 import os
 import tempfile
-from scrape_git.github import output_issue
+from scrape.github import output_issue
 
 
 class TestOutputIssue:

@@ -1,10 +1,11 @@
+"""Mailing list scraping logic."""
+
 from datetime import datetime
 from urllib.request import urlopen
 from urllib.parse import urljoin
 from os import makedirs, path
 from shutil import rmtree
 from re import search, match
-from argparse import ArgumentParser
 
 from bs4 import BeautifulSoup
 from buglib import write_jsonl
@@ -12,62 +13,57 @@ from buglib import write_jsonl
 from .launchpad import process_launchpad_bug, fetch_launchpad_bug
 from .thread import process_thread, collect_thread
 
+
 def months_iterator(start, end):
     current = start
     while current <= end:
         yield current
         if current.month == 12:
-            current = current.replace(year = current.year + 1, month = 1)
+            current = current.replace(year=current.year + 1, month=1)
         else:
-            current = current.replace(month = current.month + 1)
+            current = current.replace(month=current.month + 1)
+
 
 def prepare_output(ml_dir, lp_dir) -> None:
     if path.exists(ml_dir):
         rmtree(ml_dir)
     if path.exists(lp_dir):
         rmtree(lp_dir)
-    makedirs(ml_dir, exist_ok = True)
+    makedirs(ml_dir, exist_ok=True)
 
-def is_bug(text : str) -> bool:
+
+def is_bug(text: str) -> bool:
     return search(r'\[[^\]]*\b(BUG|bug|Bug)\b[^\]]*\]', text)
 
-def main():
-    parser = ArgumentParser(prog='scrape-mailinglist')
-    parser.add_argument('-u', '--url', required=True, help="Base URL of the mailing list archive")
-    parser.add_argument('--start', required=True, help="Start month (YYYY-MM)")
-    parser.add_argument('--end', required=True, help="End month (YYYY-MM)")
-    parser.add_argument('-o', '--output-dir', default='.', help="Output directory (default: current directory)")
-    parser.add_argument('--jsonl', action='store_true', help="Write JSONL to stdout instead of individual files")
-    args = parser.parse_args()
 
-    start_date = datetime.strptime(args.start, "%Y-%m")
-    end_date = datetime.strptime(args.end, "%Y-%m")
-    base_url = args.url.rstrip('/')
+def scrape(base_url: str, start_date: datetime, end_date: datetime,
+           output_dir: str, jsonl: bool) -> None:
+    base_url = base_url.rstrip('/')
 
-    ml_dir = path.join(args.output_dir, "mailinglist")
-    lp_dir = path.join(args.output_dir, "launchpad")
+    ml_dir = path.join(output_dir, "mailinglist")
+    lp_dir = path.join(output_dir, "launchpad")
 
-    if not args.jsonl:
+    if not jsonl:
         prepare_output(ml_dir, lp_dir)
 
     seen_launchpad = set()
-    seen_threads = {}  # title_hash -> content (for jsonl dedup)
+    seen_threads = {}
 
     for month in months_iterator(start_date, end_date):
-        if not args.jsonl:
+        if not jsonl:
             print(f"{month.strftime('%Y-%m')}")
         url = f"{base_url}/{month.strftime('%Y-%m')}/threads.html"
         html = urlopen(url).read()
-        soup = BeautifulSoup(html, features = 'html5lib')
+        soup = BeautifulSoup(html, features='html5lib')
 
         ul = soup.body.ul
-        threads = ul.find_all('li', recursive = False)
+        threads = ul.find_all('li', recursive=False)
         for li in reversed(threads):
             a_tag = li.find('b').find('a')
             if not a_tag:
                 continue
 
-            text = a_tag.get_text(strip = True)
+            text = a_tag.get_text(strip=True)
             href = a_tag.get('href')
 
             if not is_bug(text):
@@ -77,7 +73,7 @@ def main():
             re_match = search(r'\[Bug\s(\d+)\]', text)
             if re_match:
                 bug_id = re_match.group(1).strip()
-                if args.jsonl:
+                if jsonl:
                     if bug_id not in seen_launchpad:
                         seen_launchpad.add(bug_id)
                         result = fetch_launchpad_bug(bug_id)
@@ -91,7 +87,7 @@ def main():
             re_match = match(r'(?i)^re:\s*(.*)', text)
             if re_match:
                 title_hash = str(hash(re_match.group(1).strip()))[1:9]
-                if args.jsonl:
+                if jsonl:
                     if title_hash in seen_threads:
                         seen_threads[title_hash]["content"] += "\n\n" + collect_thread(urljoin(url, href))
                 else:
@@ -102,7 +98,7 @@ def main():
 
             # new thread
             title_hash = str(hash(text.strip()))[1:9]
-            if args.jsonl:
+            if jsonl:
                 if title_hash in seen_threads:
                     print(f"ERROR: {title_hash} should not exist!")
                     continue
@@ -123,9 +119,6 @@ def main():
                     file.write(f"{text}\n\n")
                 process_thread(urljoin(url, href), out_path)
 
-    if args.jsonl:
+    if jsonl:
         for record in seen_threads.values():
             write_jsonl(record)
-
-if __name__ == "__main__":
-    main()

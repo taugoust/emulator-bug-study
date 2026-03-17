@@ -1,22 +1,23 @@
 [project]
-name = "scrape-mailinglist"
+name = "scrape"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
     "buglib",
     "requests",
+    "tomlkit",
     "beautifulsoup4",
     "html5lib",
 ]
 
 [project.scripts]
-scrape-mailinglist = "scrape_mailinglist.main:main"
+scrape = "scrape.main:main"
 
 [tool.uv.sources]
 buglib = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
-packages = ["scrape_mailinglist"]
+packages = ["scrape"]
 
 [build-system]
 requires = ["hatchling"]

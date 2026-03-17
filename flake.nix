@@ -70,10 +70,7 @@
     in
     {
       packages = forAllSystems (system: rec {
-        scrape-git = pythonSets.${system}.mkVirtualEnv "scrape-git-env" { scrape-git = [ ]; };
-        scrape-mailinglist = pythonSets.${system}.mkVirtualEnv "scrape-mailinglist-env" {
-          scrape-mailinglist = [ ];
-        };
+        scrape = pythonSets.${system}.mkVirtualEnv "scrape-env" { scrape = [ ]; };
         bug-classifier = pythonSets.${system}.mkVirtualEnv "bug-classifier-env" { bug-classifier = [ ]; };
         analyze-csv = pythonSets.${system}.mkVirtualEnv "analyze-csv-env" { analyze-csv = [ ]; };
         analyze-diff = pythonSets.${system}.mkVirtualEnv "analyze-diff-env" { analyze-diff = [ ]; };
@@ -85,8 +82,7 @@
       });
 
       apps = forAllSystems (system: {
-        scrape-git = mkApp system "scrape-git" "Download issues from GitHub or GitLab";
-        scrape-mailinglist = mkApp system "scrape-mailinglist" "Scrape mail archives for bug reports";
+        scrape = mkApp system "scrape" "Scrape bug reports from GitHub, GitLab, or mailing lists";
         bug-classifier = mkApp system "bug-classifier" "Classify bugs using zero-shot or LLMs";
         analyze-csv = mkApp system "analyze-csv" "Summarize classifier output as category counts";
         analyze-diff = mkApp system "analyze-diff" "Diff two classifier runs to find category changes";

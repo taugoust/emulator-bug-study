@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from scrape_git.main import detect_source, parse_github_url, resolve_gitlab_project_id
+from scrape.main import detect_source, parse_github_url, resolve_gitlab_project_id
 
 
 class TestDetectSource:
@@ -13,9 +13,11 @@ class TestDetectSource:
     def test_github_with_path(self):
         assert detect_source("https://github.com/owner/repo/issues") == "github"
 
-    def test_unknown_raises(self):
-        with pytest.raises(ValueError, match="Cannot detect source"):
-            detect_source("https://bitbucket.org/owner/repo")
+    def test_mailinglist(self):
+        assert detect_source("https://lists.nongnu.org/archive/html/qemu-devel") == "mailinglist"
+
+    def test_unknown_host_is_mailinglist(self):
+        assert detect_source("https://example.com/archive") == "mailinglist"
 
     def test_no_scheme_raises(self):
         with pytest.raises(ValueError):
@@ -49,7 +51,7 @@ class TestResolveGitlabProjectId:
         mock_response.json.return_value = {"id": 11167699}
         mock_response.raise_for_status = MagicMock()
 
-        with patch("scrape_git.main.get", return_value=mock_response) as mock_get:
+        with patch("scrape.main.get", return_value=mock_response) as mock_get:
             result = resolve_gitlab_project_id("https://gitlab.com/qemu-project/qemu")
 
         assert result == 11167699
