@@ -10,8 +10,7 @@ members = [
     "bug-classifier",
     "bug-study-utils",
     "buglib",
-    "scrape-github",
-    "scrape-gitlab",
+    "scrape-git",
     "scrape-mailinglist",
     "word-count",
 ]
@@ -1171,24 +1170,9 @@ wheels = [
 ]
 
 [[package]]
-name = "scrape-github"
+name = "scrape-git"
 version = "0.1.0"
-source = { editable = "tools/scrape-github" }
-dependencies = [
-    { name = "buglib" },
-    { name = "requests" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "buglib", editable = "lib" },
-    { name = "requests" },
-]
-
-[[package]]
-name = "scrape-gitlab"
-version = "0.1.0"
-source = { editable = "tools/scrape-gitlab" }
+source = { editable = "tools/scrape-git" }
 dependencies = [
     { name = "buglib" },
     { name = "requests" },

@@ -18,7 +18,7 @@ utilities live in `lib/buglib/`.
 Run any tool directly:
 
 ```
-nix run .#scrape-github -- -r owner/repo
+nix run .#scrape-git -- https://github.com/owner/repo -o issues/
 nix run .#bug-classifier -- -i bugs/ -o output/
 ```
 
@@ -32,7 +32,7 @@ nix develop
 
 ```
 uv sync
-uv run scrape-github -r owner/repo
+uv run scrape-git https://github.com/owner/repo
 ```
 
 ## Testing
@@ -84,26 +84,20 @@ All scrapers support two output modes:
 - **JSONL mode** (`--jsonl`) — writes one JSON object per line to stdout. Progress messages are
   suppressed to keep stdout clean.
 
-#### scrape-github
+#### scrape-git
 
-Downloads all issues (excluding pull requests) from a GitHub repository via the REST API.
-
-```
-scrape-github -r owner/repo -o issues/
-scrape-github -r owner/repo --jsonl > issues.jsonl
-```
-
-Each issue is written as a plain-text file named by issue number.
-
-#### scrape-gitlab
-
-Downloads issues from a GitLab project. Parses structured issue descriptions (host/guest OS,
-architecture, reproduction steps) and writes both TOML metadata and plain-text files organized by
-label.
+Downloads issues from GitHub or GitLab, auto-detected from the URL. For GitLab, structured issue
+descriptions (host/guest OS, architecture, reproduction steps) are parsed and both TOML metadata and
+plain-text files are written, organized by label.
 
 ```
-scrape-gitlab -p PROJECT_ID -o output/
-scrape-gitlab -p PROJECT_ID --jsonl > issues.jsonl
+# GitHub
+scrape-git https://github.com/owner/repo -o issues/
+scrape-git https://github.com/owner/repo --jsonl > issues.jsonl
+
+# GitLab (project ID resolved automatically)
+scrape-git https://gitlab.com/qemu-project/qemu -o output/
+scrape-git https://gitlab.com/qemu-project/qemu --jsonl > issues.jsonl
 ```
 
 #### scrape-mailinglist

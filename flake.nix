@@ -70,8 +70,7 @@
     in
     {
       packages = forAllSystems (system: rec {
-        scrape-github = pythonSets.${system}.mkVirtualEnv "scrape-github-env" { scrape-github = [ ]; };
-        scrape-gitlab = pythonSets.${system}.mkVirtualEnv "scrape-gitlab-env" { scrape-gitlab = [ ]; };
+        scrape-git = pythonSets.${system}.mkVirtualEnv "scrape-git-env" { scrape-git = [ ]; };
         scrape-mailinglist = pythonSets.${system}.mkVirtualEnv "scrape-mailinglist-env" {
           scrape-mailinglist = [ ];
         };
@@ -86,8 +85,7 @@
       });
 
       apps = forAllSystems (system: {
-        scrape-github = mkApp system "scrape-github" "Download GitHub issues as plain text bug reports";
-        scrape-gitlab = mkApp system "scrape-gitlab" "Download GitLab issues with structured metadata";
+        scrape-git = mkApp system "scrape-git" "Download issues from GitHub or GitLab";
         scrape-mailinglist = mkApp system "scrape-mailinglist" "Scrape mail archives for bug reports";
         bug-classifier = mkApp system "bug-classifier" "Classify bugs using zero-shot or LLMs";
         analyze-csv = mkApp system "analyze-csv" "Summarize classifier output as category counts";

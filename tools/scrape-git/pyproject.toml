@@ -1,20 +1,21 @@
 [project]
-name = "scrape-github"
+name = "scrape-git"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
     "buglib",
     "requests",
+    "tomlkit",
 ]
 
 [project.scripts]
-scrape-github = "scrape_github.main:main"
+scrape-git = "scrape_git.main:main"
 
 [tool.uv.sources]
 buglib = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
-packages = ["scrape_github"]
+packages = ["scrape_git"]
 
 [build-system]
 requires = ["hatchling"]

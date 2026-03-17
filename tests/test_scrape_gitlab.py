@@ -1,11 +1,11 @@
 import pytest
-from scrape_gitlab.description_parser import (
+from scrape_git.description_parser import (
     remove_comments,
     get_headline_content,
     get_bullet_point,
     parse_description,
 )
-from scrape_gitlab.output import find_label
+from scrape_git.gitlab import find_label
 
 
 class TestRemoveComments:
