@@ -1,2 +1,6 @@
+# Python artifacts
 __pycache__
 .venv
+
+# Nix artifacts
+result
