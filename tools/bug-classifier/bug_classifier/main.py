@@ -2,8 +2,8 @@ from os import path, makedirs
 from datetime import timedelta
 from time import monotonic
 from argparse import ArgumentParser
-from re import sub
 from buglib import list_files_recursive
+
 
 def write_output(text, category, labels, scores, identifier, output_dir, start_time, reasoning=None):
     print(f"Category: {category}, Time: {timedelta(seconds=monotonic() - start_time)}")
@@ -75,11 +75,13 @@ def main():
     parser = ArgumentParser(prog='bug-classify')
     parser.add_argument('-i', '--input-dir', required=True, action='append', help="Input directory containing bug files (repeatable)")
     parser.add_argument('-o', '--output-dir', default='output', help="Output directory (default: output)")
-    parser.add_argument('-m', '--multi-label', action='store_true', help="Enable multi-label classification")
-    parser.add_argument('--ollama', nargs='?', const="deepseek-r1:7b", type=str, help="Use a local model via Ollama (optionally specify model name)")
-    parser.add_argument('--preamble', type=str, help="Path to preamble/prompt file (required with --ollama)")
-    parser.add_argument('--model', default="facebook/bart-large-mnli", type=str, help="HuggingFace model for zero-shot classification")
-    parser.add_argument('--compare', nargs='?', const="MoritzLaurer/deberta-v3-large-zeroshot-v2.0", type=str, help="Second model for cross-validation")
+
+    parser.add_argument('--backend', choices=['zero-shot', 'ollama'], default='zero-shot', help="Classification backend (default: zero-shot)")
+    parser.add_argument('--model', type=str, help="Model name (default depends on backend)")
+    parser.add_argument('--preamble', type=str, help="Path to preamble/prompt file (required for ollama)")
+    parser.add_argument('--compare', nargs='?', const="MoritzLaurer/deberta-v3-large-zeroshot-v2.0", type=str, help="Second model for cross-validation (zero-shot only)")
+    parser.add_argument('-m', '--multi-label', action='store_true', help="Enable multi-label classification (zero-shot only)")
+
     parser.add_argument('--positive', nargs='+', default=['semantic', 'TCG', 'assembly', 'architecture', 'mistranslation', 'register', 'user-level'], help="Positive category labels")
     parser.add_argument('--negative', nargs='+', default=['boot', 'network', 'kvm', 'vnc', 'graphic', 'device', 'socket', 'debug', 'files', 'PID', 'permissions', 'performance', 'kernel', 'peripherals', 'VMM', 'hypervisor', 'virtual', 'other'], help="Negative category labels")
     parser.add_argument('--architectures', nargs='+', default=['x86', 'arm', 'risc-v', 'i386', 'ppc'], help="Architecture labels")
@@ -90,24 +92,32 @@ def main():
     architectures = args.architectures
     categories = positive_categories + negative_categories + architectures
 
-    if args.ollama and not args.preamble:
-        parser.error("--preamble is required when using --ollama")
-
     start_time = monotonic()
 
-    if not args.ollama:
-        from transformers import pipeline
-        classifier = pipeline("zero-shot-classification", model=args.model)
-        print(f"The model {args.model} will be used")
-        compare_classifier = None
+    if args.backend == 'zero-shot':
+        from bug_classifier.backend import ZeroShotBackend
+        model = args.model or "facebook/bart-large-mnli"
+        backend = ZeroShotBackend(
+            model=model,
+            multi_label=args.multi_label,
+            positive=positive_categories,
+            negative=negative_categories,
+            architectures=architectures,
+            compare_model=args.compare,
+        )
+        print(f"The model {model} will be used")
         if args.compare:
-            compare_classifier = pipeline("zero-shot-classification", model=args.compare)
             print(f"The comparison model {args.compare} will be used")
-    else:
-        from ollama import chat
-        print(f"The model {args.ollama} will be used")
+
+    elif args.backend == 'ollama':
+        from bug_classifier.backend import OllamaBackend
+        if not args.preamble:
+            parser.error("--preamble is required when using --backend ollama")
+        model = args.model or "deepseek-r1:7b"
         with open(args.preamble, "r") as file:
             preamble = file.read()
+        backend = OllamaBackend(model=model, preamble=preamble)
+        print(f"The model {model} will be used")
 
     processed_bugs = list_files_recursive(args.output_dir, True)
 
@@ -126,24 +136,9 @@ def main():
         with open(bug, "r") as file:
             text = file.read()
 
-        if args.ollama:
-            response = chat(args.ollama, [{'role': 'user', 'content': text + "\n" + preamble}])
-            category = sub(r'[^a-zA-Z]', '', response['message']['content'].split()[-1]).lower()
-            if category not in categories:
-                category = "manual-review"
-            write_output(text, category, [], [], path.basename(bug), args.output_dir, start_time, response['message']['content'])
-        else:
-            result = classifier(text, categories, multi_label=args.multi_label)
-            category = get_category(result, positive_categories, negative_categories, architectures, args.multi_label)
-
-            if args.compare and compare_classifier and sum(1 for c in positive_categories if c in category) >= 1:
-                compare_result = compare_classifier(text, categories, multi_label=args.multi_label)
-                category = compare_category(compare_result, category, positive_categories)
-
-                result['labels'] = result['labels'] + ['SPLIT'] + compare_result['labels']
-                result['scores'] = result['scores'] + [0] + compare_result['scores']
-
-            write_output(text, category, result['labels'], result['scores'], path.basename(bug), args.output_dir, start_time)
+        result = backend.classify(text, categories)
+        write_output(text, result.category, result.labels, result.scores,
+                     path.basename(bug), args.output_dir, start_time, result.reasoning)
 
     end_time = monotonic()
     print(timedelta(seconds=end_time - start_time))
