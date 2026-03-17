@@ -56,6 +56,7 @@ The workflow consists of three stages:
 ```
 tools/              CLI tools (one Python package each)
 lib/buglib/         Shared library (file helpers, pagination)
+data/prompts/       Prompt templates for LLM classification
 tests/              Test suite
 ```
 
@@ -111,7 +112,7 @@ bug-classifier -i bugs/ -o output/ --multi-label
 bug-classifier -i bugs/ -o output/ --compare
 
 # Using a local LLM via Ollama
-bug-classifier -i bugs/ -o output/ --ollama deepseek-r1:32b --preamble classification/preambel
+bug-classifier -i bugs/ -o output/ --ollama deepseek-r1:32b --preamble data/prompts/classify.txt
 ```
 
 Multiple input directories can be specified by repeating `-i`.
@@ -124,14 +125,14 @@ Categories are configured via `--positive`, `--negative`, and `--architectures` 
 
 #### Preambles
 
-Preambles are plain-text prompt files that define the classification task for LLM mode. Several are included under `classification/`:
+Preambles are plain-text prompt files under `data/prompts/` that define the classification task for LLM mode:
 
 | File | Purpose |
 |---|---|
-| `preambel` | Main classification into bug categories. |
-| `preambel-mode` | Classify as user-mode or system-mode. |
-| `preambel-accelerator` | Classify by accelerator (TCG, KVM, VMM). |
-| `preambel-user-mode` | Sub-classify user-mode bugs (instruction, syscall, runtime). |
+| `classify.txt` | Main classification into bug categories. |
+| `mode.txt` | Classify as user-mode or system-mode. |
+| `accelerator.txt` | Classify by accelerator (TCG, KVM, VMM). |
+| `user-mode.txt` | Sub-classify user-mode bugs (instruction, syscall, runtime). |
 
 ### Analysis
 
