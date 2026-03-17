@@ -1,6 +1,8 @@
 
 This is a bug report regarding qemu.
 
-Classify the bug report into either 'user-mode' related or 'system-mode' related. System-mode reports often include higher-priviliges, peripherals, devices and operating systems. 
+Classify the bug report into either 'user-mode' related, 'system-mode' related or 'other'.
+System-mode reports often include higher privileges, peripherals, devices and operating systems.
+The 'other' category includes non-runtime reports, for example feature requests, documentation or build issues.
 
-Respond only with one word, either 'user' or 'system'.
+Respond only with one word, either 'user', 'system' or 'other'.

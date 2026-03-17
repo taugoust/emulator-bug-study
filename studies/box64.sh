@@ -7,13 +7,15 @@ BACKEND="${BACKEND:-ollama}"
 MODEL="${MODEL:-gemma3:27b}"
 export GITHUB_TOKEN=$(gh auth token 2>/dev/null || true)
 
-# Scrape
+# Scrape all Box64 GitHub issues
 scrape https://github.com/ptitSeb/box64 -o "$DATA_DIR/box64"
 
-# Classify
+# Classify: single pass into instruction / syscall / runtime / other.
+# Box64 is user-mode only so no mode pre-filter is needed; the 'other'
+# category handles feature requests, documentation and build issues directly.
 PREAMBLE_ARGS=()
 if [[ "$BACKEND" != "zero-shot" ]]; then
-    PREAMBLE_ARGS=(--preamble data/prompts/classify.txt)
+    PREAMBLE_ARGS=(--preamble data/prompts/box64.txt)
 fi
 
 bug-classify \

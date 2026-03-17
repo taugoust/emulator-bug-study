@@ -1,0 +1,4 @@
+[categories]
+positive = ["user", "system", "other"]
+negative = []
+architectures = []
