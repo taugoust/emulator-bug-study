@@ -1,12 +1,17 @@
 # Bug Study Utilities
 
-A toolkit for conducting large-scale bug studies on open-source projects. It provides scrapers for collecting bug reports from multiple sources, an LLM-based classification pipeline for categorizing them, and analysis tools for summarizing results.
+A toolkit for conducting large-scale bug studies on open-source projects. It provides scrapers for
+collecting bug reports from multiple sources, an LLM-based classification pipeline for categorizing
+them, and analysis tools for summarizing results.
 
-This repository was originally developed to study bugs in QEMU, Box64, and FEX, but the approach is general and can be adapted to other projects.
+This repository was originally developed to study bugs in QEMU, Box64, and FEX, but the approach is
+general and can be adapted to other projects.
 
 ## Setup
 
-The project is packaged as a [uv workspace](https://docs.astral.sh/uv/concepts/workspaces/) with a Nix flake. Each tool lives under `tools/` as its own Python package with a CLI entry point. Shared utilities live in `lib/buglib/`.
+The project is packaged as a [uv workspace](https://docs.astral.sh/uv/concepts/workspaces/) with a
+Nix flake. Each tool lives under `tools/` as its own Python package with a CLI entry point. Shared
+utilities live in `lib/buglib/`.
 
 ### With Nix (recommended)
 
@@ -47,9 +52,13 @@ pytest tests/ -v
 
 The workflow consists of three stages:
 
-1. **Scraping** — Bug reports are downloaded from issue trackers and mailing lists. Each bug is stored as a single plain-text file containing its title and description. All scrapers also support `--jsonl` to emit one JSON object per line to stdout for piping between tools.
-2. **Classification** — Each bug file is fed to a classifier (either a zero-shot NLI model or a local LLM via Ollama) that assigns it to a category defined by the user.
-3. **Analysis** — Helper scripts count bugs per category, compare classification runs, and cross-reference results.
+1. **Scraping** — Bug reports are downloaded from issue trackers and mailing lists. Each bug is
+   stored as a single plain-text file containing its title and description. All scrapers also
+   support `--jsonl` to emit one JSON object per line to stdout for piping between tools.
+2. **Classification** — Each bug file is fed to a classifier (either a zero-shot NLI model or a
+   local LLM via Ollama) that assigns it to a category defined by the user.
+3. **Analysis** — Helper scripts count bugs per category, compare classification runs, and
+   cross-reference results.
 
 ### Project Layout
 
@@ -72,7 +81,8 @@ The `buglib` package provides:
 
 All scrapers support two output modes:
 - **File mode** (default) — writes one file per bug to `--output-dir`.
-- **JSONL mode** (`--jsonl`) — writes one JSON object per line to stdout. Progress messages are suppressed to keep stdout clean.
+- **JSONL mode** (`--jsonl`) — writes one JSON object per line to stdout. Progress messages are
+  suppressed to keep stdout clean.
 
 #### scrape-github
 
@@ -87,7 +97,9 @@ Each issue is written as a plain-text file named by issue number.
 
 #### scrape-gitlab
 
-Downloads issues from a GitLab project. Parses structured issue descriptions (host/guest OS, architecture, reproduction steps) and writes both TOML metadata and plain-text files organized by label.
+Downloads issues from a GitLab project. Parses structured issue descriptions (host/guest OS,
+architecture, reproduction steps) and writes both TOML metadata and plain-text files organized by
+label.
 
 ```
 scrape-gitlab -p PROJECT_ID -o output/
@@ -96,7 +108,8 @@ scrape-gitlab -p PROJECT_ID --jsonl > issues.jsonl
 
 #### scrape-mailinglist
 
-Scrapes mailing list archives for threads whose subject contains `[BUG]` or `[Bug <number>]`. Threads referencing Launchpad bugs are followed and downloaded separately.
+Scrapes mailing list archives for threads whose subject contains `[BUG]` or `[Bug <number>]`.
+Threads referencing Launchpad bugs are followed and downloaded separately.
 
 ```
 scrape-mailinglist -u https://lists.nongnu.org/archive/html/qemu-devel --start 2015-04 --end 2025-05 -o output/
@@ -107,7 +120,8 @@ scrape-mailinglist -u https://lists.nongnu.org/archive/html/qemu-devel --start 2
 
 #### bug-classifier
 
-Reads scraped bug files and assigns each one to a category. Supports HuggingFace zero-shot NLI models and local LLMs via Ollama.
+Reads scraped bug files and assigns each one to a category. Supports HuggingFace zero-shot NLI
+models and local LLMs via Ollama.
 
 ```
 # Zero-shot classification
@@ -125,7 +139,8 @@ bug-classifier -i bugs/ -o output/ --ollama deepseek-r1:32b --preamble data/prom
 
 Multiple input directories can be specified by repeating `-i`.
 
-Categories are configured via `--positive`, `--negative`, and `--architectures` flags. The defaults are tuned for QEMU.
+Categories are configured via `--positive`, `--negative`, and `--architectures` flags. The defaults
+are tuned for QEMU.
 
 **Output:**
 - `<output-dir>/<category>/<bug_id>` — Classification scores and the original bug text.
@@ -133,7 +148,8 @@ Categories are configured via `--positive`, `--negative`, and `--architectures` 
 
 #### Preambles
 
-Preambles are plain-text prompt files under `data/prompts/` that define the classification task for LLM mode:
+Preambles are plain-text prompt files under `data/prompts/` that define the classification task for
+LLM mode:
 
 | File | Purpose |
 |---|---|
@@ -180,7 +196,11 @@ word-count dir1/ dir2/
 
 ## Adapting to a New Project
 
-1. **Scrape** your bug reports. The GitHub scraper works with any `owner/repo`. For other sources, write a scraper that produces one plain-text file per bug (or use `--jsonl` for structured output).
-2. **Define categories** relevant to your project via CLI flags or by writing a preamble for LLM classification.
+1. **Scrape** your bug reports. The GitHub scraper works with any `owner/repo`. For other sources,
+   write a scraper that produces one plain-text file per bug (or use `--jsonl` for structured
+   output).
+2. **Define categories** relevant to your project via CLI flags or by writing a preamble for LLM
+   classification.
 3. **Run classification** with one or more models.
-4. **Compare and iterate** using `analyze-csv` and `analyze-diff`. Manually review bugs in ambiguous categories (`manual-review`, `review`, `unknown`).
+4. **Compare and iterate** using `analyze-csv` and `analyze-diff`. Manually review bugs in ambiguous
+   categories (`manual-review`, `review`, `unknown`).
