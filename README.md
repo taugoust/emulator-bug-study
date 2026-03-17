@@ -47,7 +47,7 @@ pytest tests/ -v
 
 The workflow consists of three stages:
 
-1. **Scraping** — Bug reports are downloaded from issue trackers and mailing lists. Each bug is stored as a single plain-text file containing its title and description.
+1. **Scraping** — Bug reports are downloaded from issue trackers and mailing lists. Each bug is stored as a single plain-text file containing its title and description. All scrapers also support `--jsonl` to emit one JSON object per line to stdout for piping between tools.
 2. **Classification** — Each bug file is fed to a classifier (either a zero-shot NLI model or a local LLM via Ollama) that assigns it to a category defined by the user.
 3. **Analysis** — Helper scripts count bugs per category, compare classification runs, and cross-reference results.
 
@@ -55,7 +55,7 @@ The workflow consists of three stages:
 
 ```
 tools/              CLI tools (one Python package each)
-lib/buglib/         Shared library (file helpers, pagination)
+lib/buglib/         Shared library (file helpers, JSONL output, pagination)
 data/prompts/       Prompt templates for LLM classification
 tests/              Test suite
 ```
@@ -63,11 +63,16 @@ tests/              Test suite
 The `buglib` package provides:
 - `write_file()` — write a file, creating parent directories as needed.
 - `list_files_recursive()` — recursively list files in a directory.
+- `write_jsonl()` — write a single JSON line to a stream.
 - `pages_iterator()` — follow HTTP `Link: rel=next` headers for paginated APIs.
 
 ## Tools
 
 ### Scrapers
+
+All scrapers support two output modes:
+- **File mode** (default) — writes one file per bug to `--output-dir`.
+- **JSONL mode** (`--jsonl`) — writes one JSON object per line to stdout. Progress messages are suppressed to keep stdout clean.
 
 #### scrape-github
 
@@ -75,6 +80,7 @@ Downloads all issues (excluding pull requests) from a GitHub repository via the 
 
 ```
 scrape-github -r owner/repo -o issues/
+scrape-github -r owner/repo --jsonl > issues.jsonl
 ```
 
 Each issue is written as a plain-text file named by issue number.
@@ -85,6 +91,7 @@ Downloads issues from a GitLab project. Parses structured issue descriptions (ho
 
 ```
 scrape-gitlab -p PROJECT_ID -o output/
+scrape-gitlab -p PROJECT_ID --jsonl > issues.jsonl
 ```
 
 #### scrape-mailinglist
@@ -93,6 +100,7 @@ Scrapes mailing list archives for threads whose subject contains `[BUG]` or `[Bu
 
 ```
 scrape-mailinglist -u https://lists.nongnu.org/archive/html/qemu-devel --start 2015-04 --end 2025-05 -o output/
+scrape-mailinglist -u https://lists.nongnu.org/archive/html/qemu-devel --start 2015-04 --end 2025-05 --jsonl > bugs.jsonl
 ```
 
 ### Classification
@@ -172,7 +180,7 @@ word-count dir1/ dir2/
 
 ## Adapting to a New Project
 
-1. **Scrape** your bug reports. The GitHub scraper works with any `owner/repo`. For other sources, write a scraper that produces one plain-text file per bug.
+1. **Scrape** your bug reports. The GitHub scraper works with any `owner/repo`. For other sources, write a scraper that produces one plain-text file per bug (or use `--jsonl` for structured output).
 2. **Define categories** relevant to your project via CLI flags or by writing a preamble for LLM classification.
 3. **Run classification** with one or more models.
 4. **Compare and iterate** using `analyze-csv` and `analyze-diff`. Manually review bugs in ambiguous categories (`manual-review`, `review`, `unknown`).

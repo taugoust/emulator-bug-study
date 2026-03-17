@@ -7,9 +7,10 @@ from re import search, match
 from argparse import ArgumentParser
 
 from bs4 import BeautifulSoup
+from buglib import write_jsonl
 
-from .launchpad import process_launchpad_bug
-from .thread import process_thread
+from .launchpad import process_launchpad_bug, fetch_launchpad_bug
+from .thread import process_thread, collect_thread
 
 def months_iterator(start, end):
     current = start
@@ -36,6 +37,7 @@ def main():
     parser.add_argument('--start', required=True, help="Start month (YYYY-MM)")
     parser.add_argument('--end', required=True, help="End month (YYYY-MM)")
     parser.add_argument('-o', '--output-dir', default='.', help="Output directory (default: current directory)")
+    parser.add_argument('--jsonl', action='store_true', help="Write JSONL to stdout instead of individual files")
     args = parser.parse_args()
 
     start_date = datetime.strptime(args.start, "%Y-%m")
@@ -45,10 +47,15 @@ def main():
     ml_dir = path.join(args.output_dir, "mailinglist")
     lp_dir = path.join(args.output_dir, "launchpad")
 
-    prepare_output(ml_dir, lp_dir)
+    if not args.jsonl:
+        prepare_output(ml_dir, lp_dir)
+
+    seen_launchpad = set()
+    seen_threads = {}  # title_hash -> content (for jsonl dedup)
 
     for month in months_iterator(start_date, end_date):
-        print(f"{month.strftime('%Y-%m')}")
+        if not args.jsonl:
+            print(f"{month.strftime('%Y-%m')}")
         url = f"{base_url}/{month.strftime('%Y-%m')}/threads.html"
         html = urlopen(url).read()
         soup = BeautifulSoup(html, features = 'html5lib')
@@ -69,28 +76,56 @@ def main():
             # bug issued in launchpad
             re_match = search(r'\[Bug\s(\d+)\]', text)
             if re_match:
-                process_launchpad_bug(re_match.group(1).strip(), lp_dir)
+                bug_id = re_match.group(1).strip()
+                if args.jsonl:
+                    if bug_id not in seen_launchpad:
+                        seen_launchpad.add(bug_id)
+                        result = fetch_launchpad_bug(bug_id)
+                        if result:
+                            write_jsonl(result)
+                else:
+                    process_launchpad_bug(bug_id, lp_dir)
                 continue
 
             # existing thread
             re_match = match(r'(?i)^re:\s*(.*)', text)
             if re_match:
                 title_hash = str(hash(re_match.group(1).strip()))[1:9]
-                out_path = path.join(ml_dir, title_hash)
-                if path.exists(out_path):
-                    process_thread(urljoin(url, href), out_path)
+                if args.jsonl:
+                    if title_hash in seen_threads:
+                        seen_threads[title_hash]["content"] += "\n\n" + collect_thread(urljoin(url, href))
+                else:
+                    out_path = path.join(ml_dir, title_hash)
+                    if path.exists(out_path):
+                        process_thread(urljoin(url, href), out_path)
                 continue
 
             # new thread
             title_hash = str(hash(text.strip()))[1:9]
-            out_path = path.join(ml_dir, title_hash)
-            if path.exists(out_path):
-                print(f"ERROR: {title_hash} should not exist!")
-                continue
+            if args.jsonl:
+                if title_hash in seen_threads:
+                    print(f"ERROR: {title_hash} should not exist!")
+                    continue
+                content = text + "\n\n" + collect_thread(urljoin(url, href))
+                seen_threads[title_hash] = {
+                    "id": title_hash,
+                    "source": "mailinglist",
+                    "title": text.strip(),
+                    "content": content,
+                }
+            else:
+                out_path = path.join(ml_dir, title_hash)
+                if path.exists(out_path):
+                    print(f"ERROR: {title_hash} should not exist!")
+                    continue
 
-            with open(out_path, "w") as file:
-                file.write(f"{text}\n\n")
-            process_thread(urljoin(url, href), out_path)
+                with open(out_path, "w") as file:
+                    file.write(f"{text}\n\n")
+                process_thread(urljoin(url, href), out_path)
+
+    if args.jsonl:
+        for record in seen_threads.values():
+            write_jsonl(record)
 
 if __name__ == "__main__":
     main()

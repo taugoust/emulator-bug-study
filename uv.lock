@@ -1101,6 +1101,7 @@ version = "0.1.0"
 source = { editable = "tools/scrape-mailinglist" }
 dependencies = [
     { name = "beautifulsoup4" },
+    { name = "buglib" },
     { name = "html5lib" },
     { name = "requests" },
 ]
@@ -1108,6 +1109,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "beautifulsoup4" },
+    { name = "buglib", editable = "lib" },
     { name = "html5lib" },
     { name = "requests" },
 ]

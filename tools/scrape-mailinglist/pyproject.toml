@@ -3,6 +3,7 @@ name = "scrape-mailinglist"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
+    "buglib",
     "requests",
     "beautifulsoup4",
     "html5lib",
@@ -10,6 +11,9 @@ dependencies = [
 
 [project.scripts]
 scrape-mailinglist = "scrape_mailinglist.main:main"
+
+[tool.uv.sources]
+buglib = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["scrape_mailinglist"]
