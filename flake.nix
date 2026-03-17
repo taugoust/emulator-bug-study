@@ -109,7 +109,36 @@
         system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          pythonSet = pythonSets.${system}.overrideScope editableOverlay;
+          # Every workspace package uses hatchling, which requires `editables`
+          # at build time for editable installs.  It is not a runtime dep so it
+          # never appears in uv.lock; resolve it via resolveBuildSystem so it
+          # lands in each package's nativeBuildInputs.
+          pyprojectOverridesEditable = self: super:
+            lib.genAttrs [
+              "bug-study-utils"
+              "buglib"
+              "scrape"
+              "scrape-git"
+              "scrape-github"
+              "scrape-gitlab"
+              "scrape-mailinglist"
+              "bug-classifier"
+              "analyze-csv"
+              "analyze-diff"
+              "analyze-results"
+              "word-count"
+            ] (name:
+              super.${name}.overrideAttrs (old: {
+                nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++
+                  self.resolveBuildSystem { editables = [ ]; };
+              })
+            );
+          pythonSet = pythonSets.${system}.overrideScope (
+            lib.composeManyExtensions [
+              editableOverlay
+              pyprojectOverridesEditable
+            ]
+          );
           virtualenv = pythonSet.mkVirtualEnv "bug-study-dev-env" devDeps;
         in
         {
