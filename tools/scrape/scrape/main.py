@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 from datetime import datetime
 from urllib.parse import urlparse, quote
 from requests import get
+from buglib import install_error_handler
 
 
 def detect_source(url: str) -> str:
@@ -52,6 +53,7 @@ def resolve_gitlab_project_id(url: str) -> int:
 
 
 def main():
+    install_error_handler()
     parser = ArgumentParser(prog='scrape')
     parser.add_argument('url', help="Source URL (GitHub, GitLab, or mailing list archive)")
     parser.add_argument('-o', '--output-dir', default='issues', help="Output directory (default: issues)")

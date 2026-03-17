@@ -1,7 +1,7 @@
 from argparse import ArgumentParser
 from os import path, makedirs
 import sys
-from buglib import list_files_recursive
+from buglib import install_error_handler, list_files_recursive
 
 
 def output_csv(dictionary, file=sys.stdout):
@@ -20,6 +20,7 @@ def duplicate_bug(file_path, category, output_dir):
 
 
 def main():
+    install_error_handler()
     parser = ArgumentParser(prog='analyze-results')
     parser.add_argument('-b', '--bugs', required=True, help="Directory of known bugs to look up")
     parser.add_argument('-d', '--search-directory', required=True, help="Classifier output directory to search in")

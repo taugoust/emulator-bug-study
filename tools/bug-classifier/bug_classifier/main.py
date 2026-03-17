@@ -2,7 +2,7 @@ from os import path, makedirs
 from datetime import timedelta
 from time import monotonic
 from argparse import ArgumentParser
-from buglib import list_files_recursive
+from buglib import install_error_handler, list_files_recursive
 
 
 def write_output(text, category, labels, scores, identifier, output_dir, start_time, reasoning=None):
@@ -72,6 +72,7 @@ def compare_category(classification, category, positive_categories):
     return "review"
 
 def main():
+    install_error_handler()
     parser = ArgumentParser(prog='bug-classify')
     parser.add_argument('-i', '--input-dir', required=True, action='append', help="Input directory containing bug files (repeatable)")
     parser.add_argument('-o', '--output-dir', default='output', help="Output directory (default: output)")

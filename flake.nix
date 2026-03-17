@@ -126,6 +126,7 @@
             shellHook = ''
               unset PYTHONPATH
               export REPO_ROOT=$(git rev-parse --show-toplevel)
+              export BUG_STUDY_DEV=1
             '';
           };
         }
