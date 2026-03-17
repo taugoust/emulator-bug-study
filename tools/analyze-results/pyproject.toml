@@ -2,10 +2,15 @@
 name = "analyze-results"
 version = "0.1.0"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "buglib",
+]
 
 [project.scripts]
 analyze-results = "analyze_results.main:main"
+
+[tool.uv.sources]
+buglib = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["analyze_results"]

@@ -1,23 +1,9 @@
-from os import path, listdir, makedirs
+from os import path, makedirs
 from datetime import timedelta
 from time import monotonic
 from argparse import ArgumentParser
 from re import sub
-
-def list_files_recursive(directory, basename = False):
-    result = []
-    if not path.isdir(directory):
-        return result
-    for entry in listdir(directory):
-        full_path = path.join(directory, entry)
-        if path.isdir(full_path):
-            result = result + list_files_recursive(full_path, basename)
-        else:
-            if basename:
-                result.append(path.basename(full_path))
-            else:
-                result.append(full_path)
-    return result
+from buglib import list_files_recursive
 
 def write_output(text, category, labels, scores, identifier, output_dir, start_time, reasoning=None):
     print(f"Category: {category}, Time: {timedelta(seconds=monotonic() - start_time)}")

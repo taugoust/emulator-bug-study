@@ -1,7 +1,8 @@
 import pytest
 import os
 import tempfile
-from bug_classifier.main import get_category, compare_category, list_files_recursive, write_output
+from bug_classifier.main import get_category, compare_category, write_output
+from buglib import list_files_recursive
 from time import monotonic
 
 

@@ -1,15 +1,8 @@
-from requests import get, Response
+from requests import get
+from buglib import pages_iterator
 from .output import output_issue
 from argparse import ArgumentParser
 
-def pages_iterator(first : Response):
-    current = first
-    while current.links.get('next'):
-        current.raise_for_status()
-        yield current
-        current = get(url = current.links.get('next').get('url'))
-    current.raise_for_status()
-    yield current
 
 def main():
     parser = ArgumentParser(prog='scrape-github')

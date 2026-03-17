@@ -1,17 +1,6 @@
-from os import path, listdir
 from argparse import ArgumentParser
+from buglib import list_files_recursive
 
-def list_files_recursive(directory):
-    result = []
-    if not path.isdir(directory):
-        return result
-    for entry in listdir(directory):
-        full_path = path.join(directory, entry)
-        if path.isdir(full_path):
-            result = result + list_files_recursive(full_path)
-        else:
-            result.append(full_path)
-    return result
 
 def main():
     parser = ArgumentParser(prog='word-count')

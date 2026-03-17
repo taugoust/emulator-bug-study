@@ -9,6 +9,7 @@ members = [
     "analyze-results",
     "bug-classifier",
     "bug-study-utils",
+    "buglib",
     "scrape-github",
     "scrape-gitlab",
     "scrape-mailinglist",
@@ -47,6 +48,12 @@ source = { editable = "tools/analyze-diff" }
 name = "analyze-results"
 version = "0.1.0"
 source = { editable = "tools/analyze-results" }
+dependencies = [
+    { name = "buglib" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "buglib", editable = "lib" }]
 
 [[package]]
 name = "annotated-doc"
@@ -97,12 +104,14 @@ name = "bug-classifier"
 version = "0.1.0"
 source = { editable = "tools/bug-classifier" }
 dependencies = [
+    { name = "buglib" },
     { name = "ollama" },
     { name = "transformers", extra = ["torch"] },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "buglib", editable = "lib" },
     { name = "ollama" },
     { name = "transformers", extras = ["torch"] },
 ]
@@ -121,6 +130,11 @@ dev = [
 
 [package.metadata.requires-dev]
 dev = [{ name = "pytest" }]
+
+[[package]]
+name = "buglib"
+version = "0.1.0"
+source = { editable = "lib" }
 
 [[package]]
 name = "certifi"
@@ -1054,23 +1068,29 @@ name = "scrape-github"
 version = "0.1.0"
 source = { editable = "tools/scrape-github" }
 dependencies = [
+    { name = "buglib" },
     { name = "requests" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "requests" }]
+requires-dist = [
+    { name = "buglib", editable = "lib" },
+    { name = "requests" },
+]
 
 [[package]]
 name = "scrape-gitlab"
 version = "0.1.0"
 source = { editable = "tools/scrape-gitlab" }
 dependencies = [
+    { name = "buglib" },
     { name = "requests" },
     { name = "tomlkit" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "buglib", editable = "lib" },
     { name = "requests" },
     { name = "tomlkit" },
 ]
@@ -1343,3 +1363,9 @@ wheels = [
 name = "word-count"
 version = "0.1.0"
 source = { editable = "tools/word-count" }
+dependencies = [
+    { name = "buglib" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "buglib", editable = "lib" }]

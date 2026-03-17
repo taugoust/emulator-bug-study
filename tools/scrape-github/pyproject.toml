@@ -3,11 +3,15 @@ name = "scrape-github"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
+    "buglib",
     "requests",
 ]
 
 [project.scripts]
 scrape-github = "scrape_github.main:main"
+
+[tool.uv.sources]
+buglib = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["scrape_github"]

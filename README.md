@@ -6,7 +6,7 @@ This repository was originally developed to study bugs in QEMU, Box64, and FEX, 
 
 ## Setup
 
-The project is packaged as a [uv workspace](https://docs.astral.sh/uv/concepts/workspaces/) with a Nix flake. Each tool lives under `tools/` as its own Python package with a CLI entry point.
+The project is packaged as a [uv workspace](https://docs.astral.sh/uv/concepts/workspaces/) with a Nix flake. Each tool lives under `tools/` as its own Python package with a CLI entry point. Shared utilities live in `lib/buglib/`.
 
 ### With Nix (recommended)
 
@@ -50,6 +50,19 @@ The workflow consists of three stages:
 1. **Scraping** — Bug reports are downloaded from issue trackers and mailing lists. Each bug is stored as a single plain-text file containing its title and description.
 2. **Classification** — Each bug file is fed to a classifier (either a zero-shot NLI model or a local LLM via Ollama) that assigns it to a category defined by the user.
 3. **Analysis** — Helper scripts count bugs per category, compare classification runs, and cross-reference results.
+
+### Project Layout
+
+```
+tools/              CLI tools (one Python package each)
+lib/buglib/         Shared library (file helpers, pagination)
+tests/              Test suite
+```
+
+The `buglib` package provides:
+- `write_file()` — write a file, creating parent directories as needed.
+- `list_files_recursive()` — recursively list files in a directory.
+- `pages_iterator()` — follow HTTP `Link: rel=next` headers for paginated APIs.
 
 ## Tools
 
