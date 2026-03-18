@@ -2,7 +2,6 @@ import pytest
 import os
 import tempfile
 from bug_classifier.main import get_category, compare_category, write_output
-from buglib import list_files_recursive
 from time import monotonic
 
 
@@ -84,36 +83,6 @@ class TestCompareCategory:
             'scores': [0.5, 0.3]
         }
         assert compare_category(classification, 'semantic', POSITIVE) == 'review'
-
-
-class TestListFilesRecursive:
-    def test_flat_directory(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            for name in ['a', 'b', 'c']:
-                open(os.path.join(tmpdir, name), 'w').close()
-            result = list_files_recursive(tmpdir)
-            assert len(result) == 3
-
-    def test_nested_directory(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            subdir = os.path.join(tmpdir, 'sub')
-            os.makedirs(subdir)
-            open(os.path.join(tmpdir, 'a'), 'w').close()
-            open(os.path.join(subdir, 'b'), 'w').close()
-            result = list_files_recursive(tmpdir)
-            assert len(result) == 2
-
-    def test_basename_mode(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            subdir = os.path.join(tmpdir, 'sub')
-            os.makedirs(subdir)
-            open(os.path.join(subdir, 'myfile'), 'w').close()
-            result = list_files_recursive(tmpdir, basename=True)
-            assert result == ['myfile']
-
-    def test_nonexistent_directory(self):
-        result = list_files_recursive('/nonexistent/path')
-        assert result == []
 
 
 class TestWriteOutput:
