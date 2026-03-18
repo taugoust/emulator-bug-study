@@ -1,3 +1,4 @@
+import json
 import pytest
 import sys
 from unittest.mock import patch, MagicMock
@@ -212,3 +213,169 @@ class TestAnthropicBackend:
 
         call_kwargs = mock_client.messages.create.call_args[1]
         assert call_kwargs['model'] == 'claude-test'
+
+
+class TestPiBackend:
+    """Tests for PiBackend using a mocked subprocess."""
+
+    def _make_agent_end(self, text):
+        """Build an agent_end JSON line with the given assistant text."""
+        return json.dumps({
+            "type": "agent_end",
+            "messages": [
+                {
+                    "role": "assistant",
+                    "content": [{"type": "text", "text": text}],
+                }
+            ],
+        })
+
+    NEW_SESSION_RESPONSE = json.dumps({"type": "response", "command": "new_session"})
+
+    def _make_backend(self, stdout_lines):
+        """Create a PiBackend with mocked subprocess.Popen and shutil.which."""
+        mock_proc = MagicMock()
+        mock_proc.stdin = MagicMock()
+        # stdout is iterated line-by-line; simulate with a list iterator
+        mock_proc.stdout = iter(line + "\n" for line in stdout_lines)
+        mock_proc.poll.return_value = None
+
+        mock_popen = MagicMock(return_value=mock_proc)
+
+        with patch("shutil.which", return_value="/usr/bin/pi"), \
+             patch("subprocess.Popen", mock_popen):
+            from bug_classifier.backend import PiBackend
+            backend = PiBackend(model="test-model", preamble="classify this")
+
+        return backend, mock_proc, mock_popen
+
+    def test_valid_category(self):
+        lines = [
+            self._make_agent_end("The category is network"),
+            self.NEW_SESSION_RESPONSE,
+        ]
+        backend, _, _ = self._make_backend(lines)
+        result = backend.classify("some bug", CATEGORIES)
+
+        assert result.category == "network"
+        assert result.labels == []
+        assert result.scores == []
+        assert result.reasoning == "The category is network"
+
+    def test_unknown_category_falls_back(self):
+        lines = [
+            self._make_agent_end("I think this is a banana"),
+            self.NEW_SESSION_RESPONSE,
+        ]
+        backend, _, _ = self._make_backend(lines)
+        result = backend.classify("some bug", CATEGORIES)
+
+        assert result.category == "manual-review"
+
+    def test_strips_non_alpha(self):
+        lines = [
+            self._make_agent_end("Result: **boot**!"),
+            self.NEW_SESSION_RESPONSE,
+        ]
+        backend, _, _ = self._make_backend(lines)
+        result = backend.classify("some bug", CATEGORIES)
+
+        assert result.category == "boot"
+
+    def test_empty_response_falls_back(self):
+        lines = [
+            self._make_agent_end(""),
+            self.NEW_SESSION_RESPONSE,
+        ]
+        backend, _, _ = self._make_backend(lines)
+        result = backend.classify("some bug", CATEGORIES)
+
+        assert result.category == "manual-review"
+
+    def test_non_json_lines_are_skipped(self):
+        lines = [
+            "some debug log output",
+            "not valid json at all",
+            self._make_agent_end("network"),
+            self.NEW_SESSION_RESPONSE,
+        ]
+        backend, _, _ = self._make_backend(lines)
+        result = backend.classify("some bug", CATEGORIES)
+
+        assert result.category == "network"
+
+    def test_sends_prompt_and_new_session(self):
+        lines = [
+            self._make_agent_end("network"),
+            self.NEW_SESSION_RESPONSE,
+        ]
+        backend, mock_proc, _ = self._make_backend(lines)
+        backend.classify("bug text", CATEGORIES)
+
+        writes = [call.args[0] for call in mock_proc.stdin.write.call_args_list]
+        prompt_msg = json.loads(writes[0])
+        assert prompt_msg == {"type": "prompt", "message": "bug text"}
+
+        new_session_msg = json.loads(writes[1])
+        assert new_session_msg == {"type": "new_session"}
+
+    def test_popen_flags(self):
+        lines = [
+            self._make_agent_end("network"),
+            self.NEW_SESSION_RESPONSE,
+        ]
+        _, _, mock_popen = self._make_backend(lines)
+
+        args = mock_popen.call_args[0][0]
+        assert args[0] == "/usr/bin/pi"
+        assert "--mode" in args and "rpc" in args
+        assert "--no-session" in args
+        assert "--no-tools" in args
+        assert "--no-extensions" in args
+        assert "--no-skills" in args
+        assert "--thinking" in args and "off" in args
+        assert "--model" in args and "test-model" in args
+        assert "--system-prompt" in args and "classify this" in args
+
+    def test_close_terminates_subprocess(self):
+        lines = [
+            self._make_agent_end("network"),
+            self.NEW_SESSION_RESPONSE,
+        ]
+        backend, mock_proc, _ = self._make_backend(lines)
+        backend.close()
+
+        mock_proc.stdin.close.assert_called_once()
+        mock_proc.terminate.assert_called_once()
+        mock_proc.wait.assert_called_once_with(timeout=5)
+
+    def test_close_noop_when_already_exited(self):
+        lines = [
+            self._make_agent_end("network"),
+            self.NEW_SESSION_RESPONSE,
+        ]
+        backend, mock_proc, _ = self._make_backend(lines)
+        mock_proc.poll.return_value = 0  # already exited
+        backend.close()
+
+        mock_proc.terminate.assert_not_called()
+
+    def test_missing_pi_binary_raises(self):
+        with patch("shutil.which", return_value=None):
+            from bug_classifier.backend import PiBackend
+            with pytest.raises(RuntimeError, match="pi binary not found"):
+                PiBackend(model="test-model", preamble="classify this")
+
+    def test_string_content_block(self):
+        """agent_end with plain string content blocks (not dict)."""
+        event = json.dumps({
+            "type": "agent_end",
+            "messages": [
+                {"role": "assistant", "content": ["boot"]},
+            ],
+        })
+        lines = [event, self.NEW_SESSION_RESPONSE]
+        backend, _, _ = self._make_backend(lines)
+        result = backend.classify("some bug", CATEGORIES)
+
+        assert result.category == "boot"

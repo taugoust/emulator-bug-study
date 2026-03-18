@@ -21,6 +21,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.pyproject-nix.follows = "pyproject-nix";
     };
+
+    llm-agents-nix.url = "github:numtide/llm-agents.nix";
   };
 
   outputs =
@@ -29,6 +31,7 @@
       pyproject-nix,
       uv2nix,
       pyproject-build-systems,
+      llm-agents-nix,
       ...
     }:
     let
@@ -69,26 +72,60 @@
       };
     in
     {
-      packages = forAllSystems (system: rec {
-        scrape = pythonSets.${system}.mkVirtualEnv "scrape-env" { scrape = [ ]; };
-        bug-classifier = pythonSets.${system}.mkVirtualEnv "bug-classifier-env" { bug-classifier = [ ]; };
-        analyze-csv = pythonSets.${system}.mkVirtualEnv "analyze-csv-env" { analyze-csv = [ ]; };
-        analyze-diff = pythonSets.${system}.mkVirtualEnv "analyze-diff-env" { analyze-diff = [ ]; };
-        analyze-results = pythonSets.${system}.mkVirtualEnv "analyze-results-env" {
-          analyze-results = [ ];
-        };
-        word-count = pythonSets.${system}.mkVirtualEnv "word-count-env" { word-count = [ ]; };
-        default = pythonSets.${system}.mkVirtualEnv "bug-study-env" workspace.deps.default;
-      });
+      packages = forAllSystems (system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+          pi = llm-agents-nix.packages.${system}.pi;
+          bugClassifierEnv =
+            pythonSets.${system}.mkVirtualEnv "bug-classifier-env" { bug-classifier = [ ]; };
+          bugClassifierWrapped = pkgs.writeShellScriptBin "bug-classifier" ''
+            export PATH="${pi}/bin:$PATH"
+            exec ${bugClassifierEnv}/bin/bug-classifier "$@"
+          '';
+        in
+        {
+          scrape = pythonSets.${system}.mkVirtualEnv "scrape-env" { scrape = [ ]; };
+          bug-classifier = bugClassifierEnv;
+          bug-classifier-full = bugClassifierWrapped;
+          analyze-csv = pythonSets.${system}.mkVirtualEnv "analyze-csv-env" { analyze-csv = [ ]; };
+          analyze-diff = pythonSets.${system}.mkVirtualEnv "analyze-diff-env" { analyze-diff = [ ]; };
+          analyze-results = pythonSets.${system}.mkVirtualEnv "analyze-results-env" {
+            analyze-results = [ ];
+          };
+          word-count = pythonSets.${system}.mkVirtualEnv "word-count-env" { word-count = [ ]; };
+          default = pythonSets.${system}.mkVirtualEnv "bug-study-env" workspace.deps.default;
+        });
 
-      apps = forAllSystems (system: {
-        scrape = mkApp system "scrape" "Scrape bug reports from GitHub, GitLab, or mailing lists";
-        bug-classifier = mkApp system "bug-classifier" "Classify bugs using zero-shot or LLMs";
-        analyze-csv = mkApp system "analyze-csv" "Summarize classifier output as category counts";
-        analyze-diff = mkApp system "analyze-diff" "Diff two classifier runs to find category changes";
-        analyze-results = mkApp system "analyze-results" "Check known bugs against classification";
-        word-count = mkApp system "word-count" "Report word count statistics for bug report files";
-      });
+      apps = forAllSystems (system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+          pi = llm-agents-nix.packages.${system}.pi;
+          bugClassifierEnv =
+            pythonSets.${system}.mkVirtualEnv "bug-classifier-env" { bug-classifier = [ ]; };
+          # Wrap the bug-classifier binary so that `pi` is always on PATH,
+          # even for users who have not installed it via their own nix config.
+          bugClassifierWrapped = pkgs.writeShellScriptBin "bug-classifier" ''
+            export PATH="${pi}/bin:$PATH"
+            exec ${bugClassifierEnv}/bin/bug-classifier "$@"
+          '';
+        in
+        {
+          scrape = mkApp system "scrape" "Scrape bug reports from GitHub, GitLab, or mailing lists";
+          bug-classifier = {
+            type = "app";
+            program = "${bugClassifierEnv}/bin/bug-classifier";
+            meta.description = "Classify bugs using zero-shot or LLMs (local backends only)";
+          };
+          bug-classifier-full = {
+            type = "app";
+            program = "${bugClassifierWrapped}/bin/bug-classifier";
+            meta.description = "Classify bugs with all backends including pi";
+          };
+          analyze-csv = mkApp system "analyze-csv" "Summarize classifier output as category counts";
+          analyze-diff = mkApp system "analyze-diff" "Diff two classifier runs to find category changes";
+          analyze-results = mkApp system "analyze-results" "Check known bugs against classification";
+          word-count = mkApp system "word-count" "Report word count statistics for bug report files";
+        });
 
       checks = forAllSystems (
         system:
@@ -141,12 +178,8 @@
           );
           virtualenv = pythonSet.mkVirtualEnv "bug-study-dev-env" devDeps;
         in
-        {
-          default = pkgs.mkShell {
-            packages = [
-              virtualenv
-              pkgs.uv
-            ];
+        let
+          commonShell = {
             env = {
               UV_NO_SYNC = "1";
               UV_PYTHON = pythonSet.python.interpreter;
@@ -158,6 +191,22 @@
               export BUG_STUDY_DEV=1
             '';
           };
+        in
+        {
+          default = pkgs.mkShell (commonShell // {
+            packages = [
+              virtualenv
+              pkgs.uv
+            ];
+          });
+
+          full = pkgs.mkShell (commonShell // {
+            packages = [
+              virtualenv
+              pkgs.uv
+              llm-agents-nix.packages.${system}.pi
+            ];
+          });
         }
       );
     };

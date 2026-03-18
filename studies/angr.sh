@@ -3,8 +3,8 @@ set -euo pipefail
 
 DATA_DIR="${DATA_DIR:-results/angr/scraper}"
 OUTPUT_DIR="${OUTPUT_DIR:-results/angr/classifier/$(date +%Y%m%d)}"
-BACKEND="${BACKEND:-anthropic}"
-MODEL="${MODEL:-claude-haiku-4-20250514}"
+BACKEND="${BACKEND:-pi}"
+MODEL="${MODEL:-claude-haiku-4-5}"
 export GITHUB_TOKEN=$(gh auth token 2>/dev/null || true)
 
 # Scrape all angr GitHub issues

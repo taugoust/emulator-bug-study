@@ -111,3 +111,104 @@ class AnthropicBackend(ClassifierBackend):
             scores=[],
             reasoning=raw,
         )
+
+
+class PiBackend(ClassifierBackend):
+    """Classification via pi coding agent in RPC mode."""
+
+    def __init__(self, model: str, preamble: str):
+        import subprocess
+        import shutil
+
+        pi_bin = shutil.which("pi")
+        if pi_bin is None:
+            raise RuntimeError(
+                "pi binary not found on PATH. "
+                "Run via `nix run .#bug-classifier-full` or enter `nix develop .#full`."
+            )
+
+        self.proc = subprocess.Popen(
+            [
+                pi_bin,
+                "--mode", "rpc",
+                "--no-session",
+                "--no-tools",
+                "--no-extensions",
+                "--no-skills",
+                "--thinking", "off",
+                "--model", model,
+                "--system-prompt", preamble,
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+
+    def classify(self, text: str, categories: list[str], **kwargs) -> ClassificationResult:
+        import json
+
+        # Send the prompt
+        self.proc.stdin.write(json.dumps({"type": "prompt", "message": text}) + "\n")
+        self.proc.stdin.flush()
+
+        # Read until agent_end event
+        raw = ""
+        for line in self.proc.stdout:
+            line = line.rstrip("\n")
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if event.get("type") == "agent_end":
+                # Extract the last assistant text content
+                for msg in reversed(event.get("messages", [])):
+                    if msg.get("role") == "assistant":
+                        for block in reversed(msg.get("content", [])):
+                            if isinstance(block, dict) and block.get("type") == "text":
+                                raw = block["text"]
+                                break
+                            elif isinstance(block, str):
+                                raw = block
+                                break
+                        if raw:
+                            break
+                break
+
+        # Parse category (same logic as OllamaBackend / AnthropicBackend)
+        if raw.strip():
+            category = sub(r'[^a-zA-Z]', '', raw.split()[-1]).lower()
+            if category not in categories:
+                category = "manual-review"
+        else:
+            category = "manual-review"
+
+        # Reset session context for the next bug
+        self.proc.stdin.write(json.dumps({"type": "new_session"}) + "\n")
+        self.proc.stdin.flush()
+
+        # Drain until new_session response
+        for line in self.proc.stdout:
+            line = line.rstrip("\n")
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if event.get("type") == "response" and event.get("command") == "new_session":
+                break
+
+        return ClassificationResult(
+            category=category,
+            labels=[],
+            scores=[],
+            reasoning=raw,
+        )
+
+    def close(self):
+        """Terminate the pi subprocess."""
+        if hasattr(self, 'proc') and self.proc.poll() is None:
+            self.proc.stdin.close()
+            self.proc.terminate()
+            self.proc.wait(timeout=5)
+
+    def __del__(self):
+        self.close()

@@ -77,7 +77,7 @@ def main():
     parser.add_argument('-i', '--input-dir', required=True, action='append', help="Input directory containing bug files (repeatable)")
     parser.add_argument('-o', '--output-dir', default='output', help="Output directory (default: output)")
 
-    parser.add_argument('--backend', choices=['zero-shot', 'ollama', 'anthropic'], default='zero-shot', help="Classification backend (default: zero-shot)")
+    parser.add_argument('--backend', choices=['zero-shot', 'ollama', 'anthropic', 'pi'], default='zero-shot', help="Classification backend (default: zero-shot)")
     parser.add_argument('--model', type=str, help="Model name (default depends on backend)")
     parser.add_argument('--preamble', type=str, help="Path to preamble/prompt file (required for ollama)")
     parser.add_argument('--compare', nargs='?', const="MoritzLaurer/deberta-v3-large-zeroshot-v2.0", type=str, help="Second model for cross-validation (zero-shot only)")
@@ -129,6 +129,12 @@ def main():
         print(f"The model {model} will be used")
 
     elif args.backend == 'anthropic':
+        import os, sys
+        if not os.environ.get("ANTHROPIC_API_KEY"):
+            sys.exit(
+                "error: --backend anthropic requires the ANTHROPIC_API_KEY "
+                "environment variable to be set."
+            )
         from bug_classifier.backend import AnthropicBackend
         if not args.preamble:
             parser.error("--preamble is required when using --backend anthropic")
@@ -137,6 +143,23 @@ def main():
             preamble = file.read()
         backend = AnthropicBackend(model=model, preamble=preamble)
         print(f"The model {model} will be used")
+
+    elif args.backend == 'pi':
+        import shutil, sys
+        if shutil.which("pi") is None:
+            sys.exit(
+                "error: --backend pi requires the `pi` coding agent to be installed.\n"
+                "Run the classifier via `nix run .#bug-classifier-full` or enter "
+                "`nix develop .#full` and re-run."
+            )
+        from bug_classifier.backend import PiBackend
+        if not args.preamble:
+            parser.error("--preamble is required when using --backend pi")
+        model = args.model or "claude-haiku-4-5"
+        with open(args.preamble, "r") as file:
+            preamble = file.read()
+        backend = PiBackend(model=model, preamble=preamble)
+        print(f"The model {model} will be used via pi")
 
     processed_bugs = list_files_recursive(args.output_dir, True)
 
