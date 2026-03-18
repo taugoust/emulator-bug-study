@@ -1,0 +1,15 @@
+
+Classify the given bug report. It is part of angr, a binary analysis framework.
+
+These are the possible categories:
+
+instruction: The bug is caused by an instruction that angr does not support or handles incorrectly.
+This includes failures to lift an instruction to VEX IR, unsupported IR operations, wrong flag or register semantics, and any error traceable to the handling of a specific instruction or instruction encoding.
+syscall: The bug is caused by a system call that angr does not simulate or simulates incorrectly.
+This includes missing or incorrect SimProcedures for POSIX calls, system call stubs that return wrong values or leave the state inconsistent.
+analysis: The bug occurs in angr's analysis or symbolic execution machinery, independently of a specific instruction or syscall.
+This includes errors in CFG recovery, symbolic execution (SimulationManager), constraint solving (claripy), binary loading (CLE), or other analysis passes.
+other: The report is not about a runtime or analysis bug.
+This includes feature requests, documentation issues, build or installation problems, and general questions.
+
+Respond only with a single word, the name of the category.

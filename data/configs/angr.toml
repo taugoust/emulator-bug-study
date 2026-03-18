@@ -1,0 +1,4 @@
+[categories]
+positive = ["instruction", "syscall", "analysis", "other"]
+negative = []
+architectures = ["x86", "arm", "risc-v", "i386"]
