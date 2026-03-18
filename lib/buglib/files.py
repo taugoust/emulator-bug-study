@@ -23,7 +23,7 @@ def list_files_recursive(directory: str, basename: bool = False) -> list[str]:
     for entry in listdir(directory):
         full_path = path.join(directory, entry)
         if path.isdir(full_path):
-            result = result + list_files_recursive(full_path, basename)
+            result.extend(list_files_recursive(full_path, basename))
         else:
             if basename:
                 result.append(path.basename(full_path))
