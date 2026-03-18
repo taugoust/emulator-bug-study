@@ -2,7 +2,24 @@
 
 from __future__ import annotations
 from dataclasses import dataclass
-from re import sub
+from re import sub, compile as re_compile
+
+_THINK_RE = re_compile(r'<think>.*?</think>', flags=8)  # 8 = re.DOTALL
+
+
+def parse_category(raw: str, categories: list[str]) -> str:
+    """Extract the first valid category word from a model response.
+
+    Strips <think>…</think> blocks first (DeepSeek-R1 / reasoning models),
+    then returns the first word that matches a known category.  Falls back to
+    'manual-review' if no match is found.
+    """
+    text = _THINK_RE.sub('', raw)
+    for word in text.split():
+        candidate = sub(r'[^a-zA-Z-]', '', word).lower()
+        if candidate in categories:
+            return candidate
+    return "manual-review"
 
 
 @dataclass
@@ -70,9 +87,7 @@ class OllamaBackend(ClassifierBackend):
 
         response = chat(self.model, [{'role': 'user', 'content': text + "\n" + self.preamble}])
         raw = response['message']['content']
-        category = sub(r'[^a-zA-Z]', '', raw.split()[-1]).lower()
-        if category not in categories:
-            category = "manual-review"
+        category = parse_category(raw, categories)
 
         return ClassificationResult(
             category=category,
@@ -101,9 +116,7 @@ class AnthropicBackend(ClassifierBackend):
             messages=[{"role": "user", "content": text}],
         )
         raw = response.content[0].text
-        category = sub(r'[^a-zA-Z]', '', raw.split()[-1]).lower()
-        if category not in categories:
-            category = "manual-review"
+        category = parse_category(raw, categories)
 
         return ClassificationResult(
             category=category,
@@ -174,13 +187,8 @@ class PiBackend(ClassifierBackend):
                             break
                 break
 
-        # Parse category (same logic as OllamaBackend / AnthropicBackend)
-        if raw.strip():
-            category = sub(r'[^a-zA-Z]', '', raw.split()[-1]).lower()
-            if category not in categories:
-                category = "manual-review"
-        else:
-            category = "manual-review"
+        # Parse category
+        category = parse_category(raw, categories)
 
         # Reset session context for the next bug
         self.proc.stdin.write(json.dumps({"type": "new_session"}) + "\n")
