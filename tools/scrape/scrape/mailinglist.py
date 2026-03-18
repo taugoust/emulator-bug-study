@@ -4,7 +4,7 @@ from datetime import datetime
 from urllib.request import urlopen
 from urllib.parse import urljoin
 from os import makedirs, path
-from shutil import rmtree
+
 from re import search, match
 
 from bs4 import BeautifulSoup
@@ -25,11 +25,8 @@ def months_iterator(start, end):
 
 
 def prepare_output(ml_dir, lp_dir) -> None:
-    if path.exists(ml_dir):
-        rmtree(ml_dir)
-    if path.exists(lp_dir):
-        rmtree(lp_dir)
     makedirs(ml_dir, exist_ok=True)
+    makedirs(lp_dir, exist_ok=True)
 
 
 def is_bug(text: str) -> bool:
