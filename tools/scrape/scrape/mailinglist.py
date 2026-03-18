@@ -1,6 +1,7 @@
 """Mailing list scraping logic."""
 
 from datetime import datetime
+from hashlib import sha256
 from urllib.request import urlopen
 from urllib.parse import urljoin
 from os import makedirs, path
@@ -83,7 +84,7 @@ def scrape(base_url: str, start_date: datetime, end_date: datetime,
             # existing thread
             re_match = match(r'(?i)^re:\s*(.*)', text)
             if re_match:
-                title_hash = str(hash(re_match.group(1).strip()))[1:9]
+                title_hash = sha256(re_match.group(1).strip().encode()).hexdigest()[:12]
                 if jsonl:
                     if title_hash in seen_threads:
                         seen_threads[title_hash]["content"] += "\n\n" + collect_thread(urljoin(url, href))
@@ -94,7 +95,7 @@ def scrape(base_url: str, start_date: datetime, end_date: datetime,
                 continue
 
             # new thread
-            title_hash = str(hash(text.strip()))[1:9]
+            title_hash = sha256(text.strip().encode()).hexdigest()[:12]
             if jsonl:
                 if title_hash in seen_threads:
                     print(f"ERROR: {title_hash} should not exist!")
