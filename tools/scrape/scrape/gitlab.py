@@ -1,6 +1,8 @@
 """GitLab issue scraping logic."""
 
 import os
+import sys
+from json import JSONDecodeError
 from tomlkit import dumps
 from buglib import (
     clear_checkpoint, existing_issue_ids, read_checkpoint, write_checkpoint,
@@ -59,7 +61,12 @@ def scrape(project_id: int, output_dir: str, jsonl: bool) -> None:
 
     if jsonl:
         for response in pages_iterator(session.get(url), session=session):
-            for i in response.json():
+            try:
+                items = response.json()
+            except JSONDecodeError:
+                print(f"Warning: non-JSON response from {response.url}, skipping page", file=sys.stderr)
+                continue
+            for i in items:
                 write_jsonl(_parse_issue(i))
         return
 
@@ -72,8 +79,14 @@ def scrape(project_id: int, output_dir: str, jsonl: bool) -> None:
         print(f"Current page: {response.headers['x-page']}")
         write_checkpoint(output_dir, response.url)
 
+        try:
+            items = response.json()
+        except JSONDecodeError:
+            print(f"Warning: non-JSON response from {response.url}, skipping page", file=sys.stderr)
+            continue
+
         all_existing = True
-        for i in response.json():
+        for i in items:
             issue = _parse_issue(i)
             if issue['id'] in existing_ids:
                 continue
