@@ -2,7 +2,7 @@ from requests import get, Response
 from os import makedirs, path
 
 def launchpad_id_valid(bug_id: str) -> bool:
-    return len(bug_id) == 7 or len(bug_id) == 6
+    return bug_id.isdigit() and len(bug_id) > 0
 
 def response_valid(response: Response) -> bool:
     return 'application/json' in response.headers.get('Content-Type', '')
