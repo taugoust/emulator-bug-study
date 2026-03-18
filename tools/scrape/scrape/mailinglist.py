@@ -15,7 +15,7 @@ from .launchpad import process_launchpad_bug, fetch_launchpad_bug
 from .thread import process_thread, collect_thread
 
 
-def months_iterator(start, end):
+def months_iterator(start: datetime, end: datetime):
     current = start
     while current <= end:
         yield current
@@ -25,13 +25,13 @@ def months_iterator(start, end):
             current = current.replace(month=current.month + 1)
 
 
-def prepare_output(ml_dir, lp_dir) -> None:
+def prepare_output(ml_dir: str, lp_dir: str) -> None:
     makedirs(ml_dir, exist_ok=True)
     makedirs(lp_dir, exist_ok=True)
 
 
 def is_bug(text: str) -> bool:
-    return search(r'\[[^\]]*\b(BUG|bug|Bug)\b[^\]]*\]', text)
+    return bool(search(r'\[[^\]]*\b(BUG|bug|Bug)\b[^\]]*\]', text))
 
 
 def scrape(base_url: str, start_date: datetime, end_date: datetime,

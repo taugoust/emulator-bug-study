@@ -1,10 +1,10 @@
 from re import sub, search, DOTALL
 from tomlkit import string
 
-def remove_comments(description : str) -> str:
+def remove_comments(description: str) -> str:
     return sub(r'<!--(.|\n)*?-->', '', description)
 
-def get_headline_content(description : str, headline : str) -> str:
+def get_headline_content(description: str, headline: str) -> str:
     pattern = rf'## {headline}\s+(.*?)(?=##\s|\Z)'
 
     match = search(pattern, description, DOTALL)
@@ -13,7 +13,7 @@ def get_headline_content(description : str, headline : str) -> str:
     else:
         return "n/a"
 
-def get_bullet_point(description : str, headline : str, category : str) -> str:
+def get_bullet_point(description: str, headline: str, category: str) -> str:
     pattern = rf'{headline}(?:(?:.|\n)+?){category}:\s+(?:`)?(.+?)(?:`)?(?=\s)(?:\n|$)'
 
     match = search(pattern, description)
@@ -22,7 +22,7 @@ def get_bullet_point(description : str, headline : str, category : str) -> str:
     else:
         return "n/a"
 
-def parse_description(description : str) -> dict:
+def parse_description(description: str) -> dict:
     desc = remove_comments(description)
 
     result = {
