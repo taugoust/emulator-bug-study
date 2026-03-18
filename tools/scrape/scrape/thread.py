@@ -9,11 +9,6 @@ def extract_message(html: str) -> str:
     soup = BeautifulSoup(html, 'html.parser')
     return soup.get_text(separator='\n', strip=True)
 
-def write_message(html: str, file_path: str) -> None:
-    text = extract_message(html)
-    with open(file_path, "a") as file:
-        file.write(f"{text}\n\n")
-
 def collect_thread(url: str) -> str:
     """Fetch a thread and return its full text content."""
     parts = []
