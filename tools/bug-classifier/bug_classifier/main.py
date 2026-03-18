@@ -36,8 +36,6 @@ def get_category(classification, positive_categories, negative_categories, archi
 
     if all(i < 0.8 for i in classification["scores"]):
         return "none"
-    elif sum(1 for i in classification["scores"] if i > 0.85) >= 20:
-        return "all"
     elif classification["scores"][0] - classification["scores"][-1] <= 0.2:
         return "unknown"
 
