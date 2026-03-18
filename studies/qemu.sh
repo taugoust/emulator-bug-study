@@ -21,7 +21,7 @@ if [[ "$BACKEND" != "zero-shot" ]]; then
     PREAMBLE_ARGS=(--preamble data/prompts/mode.txt)
 fi
 
-bug-classify \
+bug-classifier \
     --config data/configs/qemu-mode.toml \
     --backend "$BACKEND" \
     ${MODEL:+--model "$MODEL"} \
@@ -37,7 +37,7 @@ if [[ "$BACKEND" != "zero-shot" ]]; then
     PREAMBLE_ARGS=(--preamble data/prompts/user-mode.txt)
 fi
 
-bug-classify \
+bug-classifier \
     --config data/configs/qemu-user-mode.toml \
     --backend "$BACKEND" \
     ${MODEL:+--model "$MODEL"} \
