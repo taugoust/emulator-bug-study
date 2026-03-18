@@ -4,6 +4,7 @@ import tempfile
 from unittest.mock import MagicMock, patch
 from buglib.files import write_file, list_files_recursive
 from buglib.github import github_session
+from buglib.gitlab import gitlab_session
 from buglib.pagination import pages_iterator
 
 
@@ -91,6 +92,37 @@ class TestGithubSession:
 
     def test_with_token_no_warning(self, capsys):
         github_session("mytoken")
+        assert capsys.readouterr().err == ""
+
+
+class TestGitlabSession:
+    def test_with_token_sets_private_token_header(self):
+        session = gitlab_session("mytoken")
+        assert session.headers["PRIVATE-TOKEN"] == "mytoken"
+
+    def test_without_token_no_private_token_header(self):
+        session = gitlab_session(None)
+        assert "PRIVATE-TOKEN" not in session.headers
+
+    def test_empty_token_no_private_token_header(self):
+        # GITLAB_TOKEN=$(glab auth token ...) yields "" when glab is not set up
+        session = gitlab_session("")
+        assert "PRIVATE-TOKEN" not in session.headers
+
+    def test_without_token_warns(self, capsys):
+        gitlab_session(None)
+        err = capsys.readouterr().err
+        assert "Warning" in err
+        assert "GITLAB_TOKEN" in err
+
+    def test_empty_token_warns(self, capsys):
+        gitlab_session("")
+        err = capsys.readouterr().err
+        assert "Warning" in err
+        assert "GITLAB_TOKEN" in err
+
+    def test_with_token_no_warning(self, capsys):
+        gitlab_session("mytoken")
         assert capsys.readouterr().err == ""
 
 

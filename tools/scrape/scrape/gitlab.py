@@ -1,8 +1,8 @@
 """GitLab issue scraping logic."""
 
-from requests import get
+import os
 from tomlkit import dumps
-from buglib import pages_iterator, write_file, write_jsonl
+from buglib import gitlab_session, pages_iterator, write_file, write_jsonl
 from .description_parser import parse_description
 
 
@@ -35,10 +35,12 @@ def output_issue(issue: dict, output_dir: str = ".") -> None:
 
 
 def scrape(project_id: int, output_dir: str, jsonl: bool) -> None:
+    session = gitlab_session(os.environ.get("GITLAB_TOKEN"))
+
     per_page = 100
     url = f"https://gitlab.com/api/v4/projects/{project_id}/issues?per_page={per_page}"
 
-    for response in pages_iterator(get(url)):
+    for response in pages_iterator(session.get(url), session=session):
         if not jsonl:
             print(f"Current page: {response.headers['x-page']}")
 
