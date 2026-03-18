@@ -24,15 +24,14 @@ def fetch_launchpad_bug(bug_id: str) -> dict | None:
     messages_response = get(bug_data['messages_collection_link'])
     messages_data = messages_response.json()
 
-    content = bug_data['title'] + "\n\n"
-    for entry in messages_data['entries']:
-        content += entry['content'] + "\n\n"
+    parts = [bug_data['title']] + [entry['content'] for entry in messages_data['entries']]
+    content = "\n\n".join(parts)
 
     return {
         "id": bug_id,
         "source": "launchpad",
         "title": bug_data['title'],
-        "content": content.strip(),
+        "content": content,
     }
 
 def process_launchpad_bug(bug_id: str, output_dir: str = "output_launchpad") -> None:
