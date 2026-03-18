@@ -2,6 +2,7 @@ import pytest
 import os
 import tempfile
 from unittest.mock import MagicMock, patch
+from buglib.checkpoint import clear_checkpoint, existing_issue_ids, read_checkpoint, write_checkpoint
 from buglib.files import write_file, list_files_recursive
 from buglib.github import github_session
 from buglib.gitlab import gitlab_session
@@ -154,3 +155,75 @@ class TestPagesIteratorSession:
 
         assert len(pages) == 2
         mock_get.assert_called_once_with(url="https://api.github.com/page2")
+
+
+class TestExistingIssueIds:
+    def test_flat_integer_files(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            for name in ["1", "2", "3"]:
+                open(os.path.join(tmpdir, name), "w").close()
+            assert existing_issue_ids(tmpdir) == {1, 2, 3}
+
+    def test_nested_integer_files(self):
+        # Simulates GitLab issues_text layout
+        with tempfile.TemporaryDirectory() as tmpdir:
+            subdir = os.path.join(tmpdir, "target_arm", "host_missing", "accel_TCG")
+            os.makedirs(subdir)
+            open(os.path.join(subdir, "42"), "w").close()
+            open(os.path.join(subdir, "99"), "w").close()
+            assert existing_issue_ids(tmpdir) == {42, 99}
+
+    def test_toml_extension_stripped(self):
+        # Simulates GitLab issues_toml layout
+        with tempfile.TemporaryDirectory() as tmpdir:
+            open(os.path.join(tmpdir, "10.toml"), "w").close()
+            open(os.path.join(tmpdir, "20.toml"), "w").close()
+            assert existing_issue_ids(tmpdir) == {10, 20}
+
+    def test_non_integer_filenames_ignored(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            open(os.path.join(tmpdir, "1"), "w").close()
+            open(os.path.join(tmpdir, ".checkpoint"), "w").close()
+            open(os.path.join(tmpdir, "README.md"), "w").close()
+            assert existing_issue_ids(tmpdir) == {1}
+
+    def test_empty_directory(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            assert existing_issue_ids(tmpdir) == set()
+
+    def test_nonexistent_directory(self):
+        assert existing_issue_ids("/nonexistent/path") == set()
+
+
+class TestCheckpoint:
+    def test_read_returns_none_when_absent(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            assert read_checkpoint(tmpdir) is None
+
+    def test_write_then_read(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            write_checkpoint(tmpdir, "https://api.github.com/repos/x/y/issues?page=3")
+            assert read_checkpoint(tmpdir) == "https://api.github.com/repos/x/y/issues?page=3"
+
+    def test_write_creates_output_dir(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            nested = os.path.join(tmpdir, "new", "dir")
+            write_checkpoint(nested, "https://example.com/page=1")
+            assert read_checkpoint(nested) == "https://example.com/page=1"
+
+    def test_clear_removes_file(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            write_checkpoint(tmpdir, "https://example.com")
+            clear_checkpoint(tmpdir)
+            assert read_checkpoint(tmpdir) is None
+
+    def test_clear_is_noop_when_absent(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            clear_checkpoint(tmpdir)  # should not raise
+            assert read_checkpoint(tmpdir) is None
+
+    def test_overwrite_updates_url(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            write_checkpoint(tmpdir, "https://example.com/page=1")
+            write_checkpoint(tmpdir, "https://example.com/page=2")
+            assert read_checkpoint(tmpdir) == "https://example.com/page=2"

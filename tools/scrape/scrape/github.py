@@ -1,7 +1,10 @@
 """GitHub issue scraping logic."""
 
 import os
-from buglib import github_session, pages_iterator, write_file, write_jsonl
+from buglib import (
+    clear_checkpoint, existing_issue_ids, read_checkpoint, write_checkpoint,
+    github_session, pages_iterator, write_file, write_jsonl,
+)
 
 
 def output_issue(issue: dict, output_dir: str = "issues") -> None:
@@ -15,6 +18,18 @@ def output_issue(issue: dict, output_dir: str = "issues") -> None:
         exit()
 
 
+def _parse_issue(i: dict) -> dict | None:
+    """Return a normalised issue dict, or ``None`` for pull requests."""
+    if "pull_request" in i:
+        return None
+    return {
+        "id": i['number'],
+        "title": i['title'],
+        "labels": [label['name'] for label in i['labels']],
+        "description": i['body'],
+    }
+
+
 def scrape(repository: str, output_dir: str, jsonl: bool) -> None:
     session = github_session(os.environ.get("GITHUB_TOKEN"))
 
@@ -25,23 +40,36 @@ def scrape(repository: str, output_dir: str, jsonl: bool) -> None:
     check = session.get(check_url)
     check.raise_for_status()
 
-    for index, response in enumerate(pages_iterator(session.get(url), session=session)):
-        if not jsonl:
-            print(f"Current page: {index+1}")
+    if jsonl:
+        for response in pages_iterator(session.get(url), session=session):
+            for i in response.json():
+                issue = _parse_issue(i)
+                if issue:
+                    write_jsonl(issue)
+        return
 
-        data = response.json()
-        for i in data:
-            if "pull_request" in i:
+    checkpoint_url = read_checkpoint(output_dir)
+    start_url = checkpoint_url or url
+    existing_ids = existing_issue_ids(output_dir)
+    use_early_stop = checkpoint_url is None
+
+    for index, response in enumerate(pages_iterator(session.get(start_url), session=session)):
+        print(f"Current page: {index+1}")
+        write_checkpoint(output_dir, response.url)
+
+        all_existing = True
+        has_issues = False
+        for i in response.json():
+            issue = _parse_issue(i)
+            if issue is None:
                 continue
+            has_issues = True
+            if issue['id'] in existing_ids:
+                continue
+            all_existing = False
+            output_issue(issue, output_dir)
 
-            issue = {
-                "id": i['number'],
-                "title": i['title'],
-                "labels": [label['name'] for label in i['labels']],
-                "description": i['body'],
-            }
+        if use_early_stop and has_issues and all_existing:
+            break
 
-            if jsonl:
-                write_jsonl(issue)
-            else:
-                output_issue(issue, output_dir)
+    clear_checkpoint(output_dir)
