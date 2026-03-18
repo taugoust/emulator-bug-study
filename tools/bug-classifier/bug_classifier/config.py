@@ -13,7 +13,7 @@ class CategoryConfig:
     architectures: list[str]
 
     @property
-    def all(self) -> list[str]:
+    def all_categories(self) -> list[str]:
         return self.positive + self.negative + self.architectures
 
 

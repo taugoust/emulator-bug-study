@@ -7,11 +7,11 @@ from bug_classifier.config import load_config, CategoryConfig
 class TestCategoryConfig:
     def test_all_property(self):
         cfg = CategoryConfig(positive=["a", "b"], negative=["c"], architectures=["x"])
-        assert cfg.all == ["a", "b", "c", "x"]
+        assert cfg.all_categories == ["a", "b", "c", "x"]
 
     def test_empty_lists(self):
         cfg = CategoryConfig(positive=[], negative=[], architectures=[])
-        assert cfg.all == []
+        assert cfg.all_categories == []
 
 
 class TestLoadConfig:
@@ -31,7 +31,7 @@ architectures = ["x86", "arm"]
         assert cfg.positive == ["semantic", "TCG"]
         assert cfg.negative == ["boot", "network"]
         assert cfg.architectures == ["x86", "arm"]
-        assert cfg.all == ["semantic", "TCG", "boot", "network", "x86", "arm"]
+        assert cfg.all_categories == ["semantic", "TCG", "boot", "network", "x86", "arm"]
 
     def test_missing_field_raises(self):
         content = """
@@ -64,4 +64,4 @@ key = "value"
         assert "semantic" in cfg.positive
         assert "boot" in cfg.negative
         assert "x86" in cfg.architectures
-        assert len(cfg.all) == len(cfg.positive) + len(cfg.negative) + len(cfg.architectures)
+        assert len(cfg.all_categories) == len(cfg.positive) + len(cfg.negative) + len(cfg.architectures)
