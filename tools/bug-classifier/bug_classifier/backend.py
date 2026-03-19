@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 from dataclasses import dataclass
-from re import sub, compile as re_compile
+from re import sub, compile as re_compile, DOTALL
 
-_THINK_RE = re_compile(r'<think>.*?</think>', flags=8)  # 8 = re.DOTALL
+_THINK_RE = re_compile(r'<think>.*?</think>', flags=DOTALL)
 
 
 def parse_category(raw: str, categories: list[str]) -> str:
@@ -43,7 +43,7 @@ class ZeroShotBackend(ClassifierBackend):
 
     def __init__(self, model: str, multi_label: bool,
                  positive: list[str], negative: list[str], architectures: list[str],
-                 compare_model: str | None = None):
+                 compare_model: str | None = None) -> None:
         from transformers import pipeline as _pipeline
 
         self.classifier = _pipeline("zero-shot-classification", model=model)
@@ -78,7 +78,7 @@ class ZeroShotBackend(ClassifierBackend):
 class OllamaBackend(ClassifierBackend):
     """Local LLM classification via Ollama."""
 
-    def __init__(self, model: str, preamble: str):
+    def __init__(self, model: str, preamble: str) -> None:
         self.model = model
         self.preamble = preamble
 
@@ -100,7 +100,7 @@ class OllamaBackend(ClassifierBackend):
 class AnthropicBackend(ClassifierBackend):
     """Classification via the Anthropic Messages API."""
 
-    def __init__(self, model: str, preamble: str, max_tokens: int = 1024):
+    def __init__(self, model: str, preamble: str, max_tokens: int = 1024) -> None:
         from anthropic import Anthropic
 
         self.client = Anthropic()  # uses ANTHROPIC_API_KEY env var
@@ -129,7 +129,7 @@ class AnthropicBackend(ClassifierBackend):
 class PiBackend(ClassifierBackend):
     """Classification via pi coding agent in RPC mode."""
 
-    def __init__(self, model: str, preamble: str):
+    def __init__(self, model: str, preamble: str) -> None:
         import subprocess
         import shutil
 
@@ -211,12 +211,12 @@ class PiBackend(ClassifierBackend):
             reasoning=raw,
         )
 
-    def close(self):
+    def close(self) -> None:
         """Terminate the pi subprocess."""
         if hasattr(self, 'proc') and self.proc.poll() is None:
             self.proc.stdin.close()
             self.proc.terminate()
             self.proc.wait(timeout=5)
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.close()
