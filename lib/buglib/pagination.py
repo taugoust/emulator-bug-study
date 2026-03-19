@@ -23,9 +23,9 @@ def pages_iterator(first: "Response", session: "Session | None" = None) -> "Iter
     fetch = session.get if session is not None else get
 
     current = first
-    while current.links.get("next"):
+    while next_link := current.links.get("next"):
         current.raise_for_status()
         yield current
-        current = fetch(url=current.links.get("next").get("url"))
+        current = fetch(url=next_link["url"])
     current.raise_for_status()
     yield current

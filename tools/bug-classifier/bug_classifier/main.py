@@ -1,19 +1,32 @@
-from os import path, makedirs
-from datetime import timedelta
-from time import monotonic
+from __future__ import annotations
+
 from argparse import ArgumentParser
+from datetime import timedelta
+from os import makedirs, path
+from time import monotonic
+from typing import Any
+
 from buglib import install_error_handler, list_files_recursive
 
 
-def write_output(text, category, labels, scores, identifier, output_dir, start_time, reasoning=None):
+def write_output(
+    text: str,
+    category: str,
+    labels: list[str],
+    scores: list[float],
+    identifier: str,
+    output_dir: str,
+    start_time: float,
+    reasoning: str | None = None,
+) -> None:
     print(f"Category: {category}, Time: {timedelta(seconds=monotonic() - start_time)}")
     file_path = path.join(output_dir, category, identifier)
-    makedirs(path.dirname(file_path), exist_ok = True)
+    makedirs(path.dirname(file_path), exist_ok=True)
 
     with open(file_path, "w") as file:
         for label, score in zip(labels, scores):
             if label == "SPLIT":
-                file.write(f"--------------------\n")
+                file.write("--------------------\n")
             else:
                 file.write(f"{label}: {score:.3f}\n")
 
@@ -23,13 +36,20 @@ def write_output(text, category, labels, scores, identifier, output_dir, start_t
     if reasoning:
         reasoning_dir = path.join(path.dirname(output_dir), "reasoning")
         file_path = path.join(reasoning_dir, category, identifier)
-        makedirs(path.dirname(file_path), exist_ok = True)
+        makedirs(path.dirname(file_path), exist_ok=True)
 
         with open(file_path, "w") as file:
             file.write(reasoning)
 
-def get_category(classification, positive_categories, negative_categories, architectures, multi_label):
-    highest_category = classification['labels'][0]
+
+def get_category(
+    classification: dict[str, Any],
+    positive_categories: list[str],
+    negative_categories: list[str],
+    architectures: list[str],
+    multi_label: bool,
+) -> str:
+    highest_category: str = classification['labels'][0]
 
     if not multi_label:
         return highest_category
@@ -40,8 +60,8 @@ def get_category(classification, positive_categories, negative_categories, archi
         return "unknown"
 
     result = highest_category
-    arch = None
-    pos = None
+    arch: str | None = None
+    pos: str | None = None
     for label, score in zip(classification["labels"], classification["scores"]):
         if label in negative_categories and (not arch and not pos or score >= 0.92):
             return label
@@ -60,7 +80,12 @@ def get_category(classification, positive_categories, negative_categories, archi
 
     return result
 
-def compare_category(classification, category, positive_categories):
+
+def compare_category(
+    classification: dict[str, Any],
+    category: str,
+    positive_categories: list[str],
+) -> str:
     for label, score in zip(classification["labels"], classification["scores"]):
         if label in positive_categories and score >= 0.85:
             return category
@@ -69,7 +94,8 @@ def compare_category(classification, category, positive_categories):
 
     return "review"
 
-def main():
+
+def main() -> None:
     install_error_handler()
     parser = ArgumentParser(prog='bug-classify')
     parser.add_argument('-i', '--input-dir', required=True, action='append', help="Input directory containing bug files (repeatable)")
@@ -101,6 +127,9 @@ def main():
 
     start_time = monotonic()
 
+    from bug_classifier.backend import ClassifierBackend
+    backend: ClassifierBackend
+
     if args.backend == 'zero-shot':
         from bug_classifier.backend import ZeroShotBackend
         model = args.model or "facebook/bart-large-mnli"
@@ -127,7 +156,8 @@ def main():
         print(f"The model {model} will be used")
 
     elif args.backend == 'anthropic':
-        import os, sys
+        import os
+        import sys
         if not os.environ.get("ANTHROPIC_API_KEY"):
             sys.exit(
                 "error: --backend anthropic requires the ANTHROPIC_API_KEY "
@@ -143,7 +173,8 @@ def main():
         print(f"The model {model} will be used")
 
     elif args.backend == 'pi':
-        import shutil, sys
+        import shutil
+        import sys
         if shutil.which("pi") is None:
             sys.exit(
                 "error: --backend pi requires the `pi` coding agent to be installed.\n"
@@ -159,9 +190,12 @@ def main():
         backend = PiBackend(model=model, preamble=preamble)
         print(f"The model {model} will be used via pi")
 
+    else:
+        raise ValueError(f"Unknown backend: {args.backend}")
+
     processed_bugs = list_files_recursive(args.output_dir, True)
 
-    bugs = []
+    bugs: list[str] = []
     for input_dir in args.input_dir:
         bugs = bugs + list_files_recursive(input_dir)
 
@@ -182,6 +216,7 @@ def main():
 
     end_time = monotonic()
     print(timedelta(seconds=end_time - start_time))
+
 
 if __name__ == "__main__":
     main()

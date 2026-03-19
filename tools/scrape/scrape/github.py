@@ -1,22 +1,26 @@
 """GitHub issue scraping logic."""
 
+from __future__ import annotations
+
 import os
 import sys
 from json import JSONDecodeError
+from typing import Any
+
 from buglib import (
     clear_checkpoint, existing_issue_ids, read_checkpoint, write_checkpoint,
     github_session, pages_iterator, write_file, write_jsonl,
 )
 
 
-def output_issue(issue: dict, output_dir: str = "issues") -> None:
+def output_issue(issue: dict[str, Any], output_dir: str = "issues") -> None:
     if 'documentation' in issue['labels']:
         write_file(f"{output_dir}/documentation/{issue['id']}", issue['title'] + '\n' + (issue['description'] or ""))
     else:
         write_file(f"{output_dir}/{issue['id']}", issue['title'] + '\n' + (issue['description'] or ""))
 
 
-def _parse_issue(i: dict) -> dict | None:
+def _parse_issue(i: dict[str, Any]) -> dict[str, Any] | None:
     """Return a normalised issue dict, or ``None`` for pull requests."""
     if "pull_request" in i:
         return None

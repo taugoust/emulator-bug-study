@@ -79,19 +79,19 @@ class TestGithubSession:
         session = github_session("")
         assert "Authorization" not in session.headers
 
-    def test_without_token_warns(self, capsys):
+    def test_without_token_warns(self, capsys: pytest.CaptureFixture[str]):
         github_session(None)
         err = capsys.readouterr().err
         assert "Warning" in err
         assert "GITHUB_TOKEN" in err
 
-    def test_empty_token_warns(self, capsys):
+    def test_empty_token_warns(self, capsys: pytest.CaptureFixture[str]):
         github_session("")
         err = capsys.readouterr().err
         assert "Warning" in err
         assert "GITHUB_TOKEN" in err
 
-    def test_with_token_no_warning(self, capsys):
+    def test_with_token_no_warning(self, capsys: pytest.CaptureFixture[str]):
         github_session("mytoken")
         assert capsys.readouterr().err == ""
 
@@ -110,19 +110,19 @@ class TestGitlabSession:
         session = gitlab_session("")
         assert "PRIVATE-TOKEN" not in session.headers
 
-    def test_without_token_warns(self, capsys):
+    def test_without_token_warns(self, capsys: pytest.CaptureFixture[str]):
         gitlab_session(None)
         err = capsys.readouterr().err
         assert "Warning" in err
         assert "GITLAB_TOKEN" in err
 
-    def test_empty_token_warns(self, capsys):
+    def test_empty_token_warns(self, capsys: pytest.CaptureFixture[str]):
         gitlab_session("")
         err = capsys.readouterr().err
         assert "Warning" in err
         assert "GITLAB_TOKEN" in err
 
-    def test_with_token_no_warning(self, capsys):
+    def test_with_token_no_warning(self, capsys: pytest.CaptureFixture[str]):
         gitlab_session("mytoken")
         assert capsys.readouterr().err == ""
 

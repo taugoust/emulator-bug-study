@@ -1,13 +1,20 @@
-from requests import get, Response
+from __future__ import annotations
+
 from os import makedirs, path
+from typing import Any
+
+from requests import get, Response
+
 
 def launchpad_id_valid(bug_id: str) -> bool:
     return bug_id.isdigit() and len(bug_id) > 0
 
+
 def response_valid(response: Response) -> bool:
     return 'application/json' in response.headers.get('Content-Type', '')
 
-def fetch_launchpad_bug(bug_id: str) -> dict | None:
+
+def fetch_launchpad_bug(bug_id: str) -> dict[str, Any] | None:
     """Fetch a Launchpad bug and return it as a dict, or None on failure."""
     if not launchpad_id_valid(bug_id):
         print(f"{bug_id} is not valid")
@@ -33,6 +40,7 @@ def fetch_launchpad_bug(bug_id: str) -> dict | None:
         "title": bug_data['title'],
         "content": content,
     }
+
 
 def process_launchpad_bug(bug_id: str, output_dir: str = "output_launchpad") -> None:
     out_path = path.join(output_dir, bug_id)

@@ -1,9 +1,14 @@
 """GitLab issue scraping logic."""
 
+from __future__ import annotations
+
 import os
 import sys
 from json import JSONDecodeError
+from typing import Any
+
 from tomlkit import dumps
+
 from buglib import (
     clear_checkpoint, existing_issue_ids, read_checkpoint, write_checkpoint,
     gitlab_session, pages_iterator, write_file, write_jsonl,
@@ -11,16 +16,16 @@ from buglib import (
 from .description_parser import parse_description
 
 
-def find_label(labels: list, keyword: str) -> str:
+def find_label(labels: list[str], keyword: str) -> str:
     match = next((s for s in labels if f"{keyword}:" in s), None)
     if not match:
         return f"{keyword}_missing"
     return match.replace(": ", "_")
 
 
-def output_issue(issue: dict, output_dir: str = ".") -> None:
-    labels = issue['labels']
-    issue_id = issue['id']
+def output_issue(issue: dict[str, Any], output_dir: str = ".") -> None:
+    labels: list[str] = issue['labels']
+    issue_id: int = issue['id']
     toml_string = dumps(issue)
 
     target_label = find_label(labels, "target")
@@ -39,9 +44,9 @@ def output_issue(issue: dict, output_dir: str = ".") -> None:
             file.write("Additional information:\n" + issue['additional'] + "\n")
 
 
-def _parse_issue(i: dict) -> dict:
+def _parse_issue(i: dict[str, Any]) -> dict[str, Any]:
     """Return a normalised issue dict from a raw GitLab API response item."""
-    issue = {
+    issue: dict[str, Any] = {
         "id": i['iid'],
         "title": i['title'],
         "state": i['state'],

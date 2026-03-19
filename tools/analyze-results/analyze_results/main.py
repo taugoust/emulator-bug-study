@@ -1,16 +1,20 @@
-from argparse import ArgumentParser
-from os import path, makedirs
+from __future__ import annotations
+
 import sys
+from argparse import ArgumentParser
+from os import makedirs, path
+from typing import TextIO
+
 from buglib import install_error_handler, list_files_recursive
 
 
-def output_csv(dictionary, file=sys.stdout):
+def output_csv(dictionary: dict[str, int], file: TextIO = sys.stdout) -> None:
     file.write("category, count\n")
     for key, value in dictionary.items():
         file.write(f"{key}, {value}\n")
 
 
-def duplicate_bug(file_path, category, output_dir):
+def duplicate_bug(file_path: str, category: str, output_dir: str) -> None:
     output_path = path.join(output_dir, category)
     makedirs(output_path, exist_ok=True)
     with open(file_path, "r") as file:
@@ -19,7 +23,7 @@ def duplicate_bug(file_path, category, output_dir):
         file.write(text)
 
 
-def main():
+def main() -> None:
     install_error_handler()
     parser = ArgumentParser(prog='analyze-results')
     parser.add_argument('-b', '--bugs', required=True, help="Directory of known bugs to look up")
@@ -27,7 +31,7 @@ def main():
     parser.add_argument('-o', '--output', help="Copy matched bugs into this directory, organized by category")
     args = parser.parse_args()
 
-    result = {}
+    result: dict[str, int] = {}
     known_bugs = list_files_recursive(args.bugs, True)
     classified_bugs = list_files_recursive(args.search_directory, False)
 
@@ -44,6 +48,7 @@ def main():
                 continue
 
     output_csv(result)
+
 
 if __name__ == "__main__":
     main()

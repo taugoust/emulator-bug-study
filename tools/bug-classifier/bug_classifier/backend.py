@@ -1,8 +1,11 @@
 """Classification backend interface and implementations."""
 
 from __future__ import annotations
+
+import subprocess
 from dataclasses import dataclass
-from re import sub, compile as re_compile, DOTALL
+from re import compile as re_compile, sub, DOTALL
+from typing import IO
 
 _THINK_RE = re_compile(r'<think>.*?</think>', flags=DOTALL)
 
@@ -34,7 +37,7 @@ class ClassificationResult:
 class ClassifierBackend:
     """Base class for classification backends."""
 
-    def classify(self, text: str, categories: list[str], **kwargs) -> ClassificationResult:
+    def classify(self, text: str, categories: list[str], **kwargs: object) -> ClassificationResult:
         raise NotImplementedError
 
 
@@ -55,7 +58,7 @@ class ZeroShotBackend(ClassifierBackend):
         if compare_model:
             self.compare_classifier = _pipeline("zero-shot-classification", model=compare_model)
 
-    def classify(self, text: str, categories: list[str], **kwargs) -> ClassificationResult:
+    def classify(self, text: str, categories: list[str], **kwargs: object) -> ClassificationResult:
         from bug_classifier.main import get_category, compare_category
 
         result = self.classifier(text, categories, multi_label=self.multi_label)
@@ -82,7 +85,7 @@ class OllamaBackend(ClassifierBackend):
         self.model = model
         self.preamble = preamble
 
-    def classify(self, text: str, categories: list[str], **kwargs) -> ClassificationResult:
+    def classify(self, text: str, categories: list[str], **kwargs: object) -> ClassificationResult:
         from ollama import chat
 
         response = chat(self.model, [{'role': 'user', 'content': text + "\n" + self.preamble}])
@@ -108,14 +111,17 @@ class AnthropicBackend(ClassifierBackend):
         self.preamble = preamble
         self.max_tokens = max_tokens
 
-    def classify(self, text: str, categories: list[str], **kwargs) -> ClassificationResult:
+    def classify(self, text: str, categories: list[str], **kwargs: object) -> ClassificationResult:
         response = self.client.messages.create(
             model=self.model,
             max_tokens=self.max_tokens,
             system=self.preamble,
             messages=[{"role": "user", "content": text}],
         )
-        raw = response.content[0].text
+        raw = next(
+            (t for b in response.content if isinstance(t := getattr(b, "text", None), str)),
+            "",
+        )
         category = parse_category(raw, categories)
 
         return ClassificationResult(
@@ -129,8 +135,10 @@ class AnthropicBackend(ClassifierBackend):
 class PiBackend(ClassifierBackend):
     """Classification via pi coding agent in RPC mode."""
 
+    _stdin: IO[str]
+    _stdout: IO[str]
+
     def __init__(self, model: str, preamble: str) -> None:
-        import subprocess
         import shutil
 
         pi_bin = shutil.which("pi")
@@ -156,17 +164,21 @@ class PiBackend(ClassifierBackend):
             stdout=subprocess.PIPE,
             text=True,
         )
+        assert self.proc.stdin is not None
+        assert self.proc.stdout is not None
+        self._stdin = self.proc.stdin
+        self._stdout = self.proc.stdout
 
-    def classify(self, text: str, categories: list[str], **kwargs) -> ClassificationResult:
+    def classify(self, text: str, categories: list[str], **kwargs: object) -> ClassificationResult:
         import json
 
         # Send the prompt
-        self.proc.stdin.write(json.dumps({"type": "prompt", "message": text}) + "\n")
-        self.proc.stdin.flush()
+        self._stdin.write(json.dumps({"type": "prompt", "message": text}) + "\n")
+        self._stdin.flush()
 
         # Read until agent_end event
         raw = ""
-        for line in self.proc.stdout:
+        for line in self._stdout:
             line = line.rstrip("\n")
             try:
                 event = json.loads(line)
@@ -191,11 +203,11 @@ class PiBackend(ClassifierBackend):
         category = parse_category(raw, categories)
 
         # Reset session context for the next bug
-        self.proc.stdin.write(json.dumps({"type": "new_session"}) + "\n")
-        self.proc.stdin.flush()
+        self._stdin.write(json.dumps({"type": "new_session"}) + "\n")
+        self._stdin.flush()
 
         # Drain until new_session response
-        for line in self.proc.stdout:
+        for line in self._stdout:
             line = line.rstrip("\n")
             try:
                 event = json.loads(line)
@@ -214,7 +226,7 @@ class PiBackend(ClassifierBackend):
     def close(self) -> None:
         """Terminate the pi subprocess."""
         if hasattr(self, 'proc') and self.proc.poll() is None:
-            self.proc.stdin.close()
+            self._stdin.close()
             self.proc.terminate()
             self.proc.wait(timeout=5)
 

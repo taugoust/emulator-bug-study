@@ -139,6 +139,11 @@
             ${testEnv}/bin/pytest tests/ -v
             touch $out
           '';
+          pyright = pkgs.runCommand "pyright" { } ''
+            cd ${./.}
+            ${pkgs.pyright}/bin/pyright --pythonpath ${testEnv}/bin/python
+            touch $out
+          '';
         }
       );
 
@@ -193,6 +198,7 @@
             packages = [
               virtualenv
               pkgs.uv
+              pkgs.pyright
             ];
           });
 
@@ -200,6 +206,7 @@
             packages = [
               virtualenv
               pkgs.uv
+              pkgs.pyright
               llm-agents-nix.packages.${system}.pi
             ];
           });

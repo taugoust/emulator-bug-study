@@ -1,0 +1,11 @@
+{
+  "include": ["tools", "lib", "tests"],
+  "typeCheckingMode": "strict",
+  "reportMissingTypeStubs": "none",
+  "reportUnknownMemberType": "none",
+  "reportUnknownArgumentType": "none",
+  "reportUnknownVariableType": "none",
+  "reportUnknownParameterType": "none",
+  "reportUnknownLambdaType": "none",
+  "reportUnusedImport": "none"
+}

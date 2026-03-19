@@ -1,21 +1,24 @@
 """Mailing list scraping logic."""
 
+from __future__ import annotations
+
+from collections.abc import Iterator
 from datetime import datetime
 from hashlib import sha256
-from urllib.request import urlopen
-from urllib.parse import urljoin
 from os import makedirs, path
-
 from re import search, match
+from urllib.parse import urljoin
+from urllib.request import urlopen
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
+
 from buglib import write_jsonl
 
 from .launchpad import process_launchpad_bug, fetch_launchpad_bug
 from .thread import process_thread, collect_thread
 
 
-def months_iterator(start: datetime, end: datetime):
+def months_iterator(start: datetime, end: datetime) -> Iterator[datetime]:
     current = start
     while current <= end:
         yield current
@@ -34,8 +37,13 @@ def is_bug(text: str) -> bool:
     return bool(search(r'\[[^\]]*\b(BUG|bug|Bug)\b[^\]]*\]', text))
 
 
-def scrape(base_url: str, start_date: datetime, end_date: datetime,
-           output_dir: str, jsonl: bool) -> None:
+def scrape(
+    base_url: str,
+    start_date: datetime,
+    end_date: datetime,
+    output_dir: str,
+    jsonl: bool,
+) -> None:
     base_url = base_url.rstrip('/')
 
     ml_dir = path.join(output_dir, "mailinglist")
@@ -44,8 +52,8 @@ def scrape(base_url: str, start_date: datetime, end_date: datetime,
     if not jsonl:
         prepare_output(ml_dir, lp_dir)
 
-    seen_launchpad = set()
-    seen_threads = {}
+    seen_launchpad: set[str] = set()
+    seen_threads: dict[str, dict[str, str]] = {}
 
     for month in months_iterator(start_date, end_date):
         if not jsonl:
@@ -54,15 +62,26 @@ def scrape(base_url: str, start_date: datetime, end_date: datetime,
         html = urlopen(url).read()
         soup = BeautifulSoup(html, features='html5lib')
 
-        ul = soup.body.ul
+        body = soup.body
+        if body is None:
+            continue
+        ul = body.find('ul')
+        if not isinstance(ul, Tag):
+            continue
         threads = ul.find_all('li', recursive=False)
+
         for li in reversed(threads):
-            a_tag = li.find('b').find('a')
-            if not a_tag:
+            b_tag = li.find('b')
+            if not isinstance(b_tag, Tag):
+                continue
+            a_tag = b_tag.find('a')
+            if not isinstance(a_tag, Tag):
                 continue
 
             text = a_tag.get_text(strip=True)
             href = a_tag.get('href')
+            if not isinstance(href, str):
+                continue
 
             if not is_bug(text):
                 continue

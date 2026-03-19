@@ -1,21 +1,27 @@
-from os import listdir, path
-from argparse import ArgumentParser
-import sys
+from __future__ import annotations
 
-def parse_iteration(directory):
-    dictionary = {}
+import sys
+from argparse import ArgumentParser
+from os import listdir, path
+from typing import TextIO
+
+
+def parse_iteration(directory: str) -> dict[str, int]:
+    result: dict[str, int] = {}
     for entry in listdir(directory):
         full_path = path.join(directory, entry)
         if path.isdir(full_path):
-            dictionary[entry] = len([name for name in listdir(full_path)])
-    return dictionary
+            result[entry] = len([name for name in listdir(full_path)])
+    return result
 
-def output_csv(dictionary, file=sys.stdout):
+
+def output_csv(dictionary: dict[str, int], file: TextIO = sys.stdout) -> None:
     file.write("category, count\n")
     for key, value in dictionary.items():
         file.write(f"{key}, {value}\n")
 
-def main():
+
+def main() -> None:
     parser = ArgumentParser(prog='analyze-csv')
     parser.add_argument('directory', nargs='?', help="Single classifier run directory to summarize")
     parser.add_argument('-r', '--root', help="Root directory containing multiple classifier runs")
@@ -41,6 +47,7 @@ def main():
                 with open(out_path, "w") as f:
                     output_csv(dictionary, f)
                 print(f"Wrote {out_path}")
+
 
 if __name__ == "__main__":
     main()

@@ -1,9 +1,13 @@
 """Unified scraper for GitHub, GitLab, and mailing list archives."""
 
+from __future__ import annotations
+
 from argparse import ArgumentParser
 from datetime import datetime
 from urllib.parse import urlparse, quote
+
 from requests import get
+
 from buglib import install_error_handler
 
 
@@ -22,8 +26,8 @@ def detect_source(url: str) -> str:
 
 def parse_github_url(url: str) -> str:
     """Extract owner/repo from a GitHub URL."""
-    path = urlparse(url).path.strip("/")
-    parts = path.split("/")
+    url_path = urlparse(url).path.strip("/")
+    parts = url_path.split("/")
     if len(parts) < 2:
         raise ValueError(f"Invalid GitHub URL: {url} (expected https://github.com/owner/repo)")
     return f"{parts[0]}/{parts[1]}"
@@ -36,23 +40,23 @@ def resolve_gitlab_project_id(url: str) -> int:
     in which case the GitLab API is queried to look up the numeric ID.
     """
     parsed = urlparse(url)
-    path = parsed.path.strip("/")
+    url_path = parsed.path.strip("/")
 
-    for segment in reversed(path.split("/")):
+    for segment in reversed(url_path.split("/")):
         if segment.isdigit():
             return int(segment)
 
     for prefix in ("api/v4/projects/",):
-        if path.startswith(prefix):
-            path = path[len(prefix):]
+        if url_path.startswith(prefix):
+            url_path = url_path[len(prefix):]
 
-    encoded = quote(path, safe="")
+    encoded = quote(url_path, safe="")
     response = get(f"https://{parsed.hostname}/api/v4/projects/{encoded}")
     response.raise_for_status()
-    return response.json()["id"]
+    return int(response.json()["id"])
 
 
-def main():
+def main() -> None:
     install_error_handler()
     parser = ArgumentParser(prog='scrape')
     parser.add_argument('url', help="Source URL (GitHub, GitLab, or mailing list archive)")

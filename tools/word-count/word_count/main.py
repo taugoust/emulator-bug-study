@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 from buglib import install_error_handler, list_files_recursive
 
 
-def main():
+def main() -> None:
     install_error_handler()
     parser = ArgumentParser(prog='word-count')
     parser.add_argument('directories', nargs='+', help="Directories containing bug report files")

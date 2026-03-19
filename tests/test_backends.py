@@ -5,7 +5,6 @@ from unittest.mock import patch, MagicMock
 from bug_classifier.backend import (
     ClassifierBackend,
     ClassificationResult,
-    OllamaBackend,
 )
 
 
@@ -34,7 +33,7 @@ class TestClassifierBackend:
 
 
 class TestZeroShotBackend:
-    def _make_backend(self, primary_result, multi_label=False, compare_result=None):
+    def _make_backend(self, primary_result: object, multi_label: bool = False, compare_result: object = None):
         """Create a ZeroShotBackend with mocked transformers.pipeline."""
         primary_pipe = MagicMock(return_value=primary_result)
         compare_pipe = MagicMock(return_value=compare_result) if compare_result else None
@@ -109,14 +108,14 @@ class TestZeroShotBackend:
 
 
 class TestOllamaBackend:
-    def _mock_chat(self, content):
+    def _mock_chat(self, content: str):
         """Patch ollama.chat to return a canned response."""
         fake_ollama = MagicMock()
         fake_ollama.chat.return_value = {'message': {'content': content}}
         return patch.dict(sys.modules, {"ollama": fake_ollama}), fake_ollama.chat
 
     def test_valid_category(self):
-        ctx, mock_chat = self._mock_chat('The category is network')
+        ctx, _ = self._mock_chat('The category is network')
         with ctx:
             from bug_classifier.backend import OllamaBackend as OB
             backend = OB(model="test-model", preamble="classify this")
@@ -158,7 +157,7 @@ class TestOllamaBackend:
 
 
 class TestAnthropicBackend:
-    def _make_backend(self, response_text):
+    def _make_backend(self, response_text: str):
         """Create an AnthropicBackend with a mocked Anthropic client."""
         mock_message = MagicMock()
         mock_message.content = [MagicMock(text=response_text)]
@@ -218,7 +217,7 @@ class TestAnthropicBackend:
 class TestPiBackend:
     """Tests for PiBackend using a mocked subprocess."""
 
-    def _make_agent_end(self, text):
+    def _make_agent_end(self, text: str):
         """Build an agent_end JSON line with the given assistant text."""
         return json.dumps({
             "type": "agent_end",
@@ -232,7 +231,7 @@ class TestPiBackend:
 
     NEW_SESSION_RESPONSE = json.dumps({"type": "response", "command": "new_session"})
 
-    def _make_backend(self, stdout_lines):
+    def _make_backend(self, stdout_lines: list[str]):
         """Create a PiBackend with mocked subprocess.Popen and shutil.which."""
         mock_proc = MagicMock()
         mock_proc.stdin = MagicMock()
