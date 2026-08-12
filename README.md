@@ -210,6 +210,13 @@ Reports word count statistics for bug report files.
 word-count dir1/ dir2/
 ```
 
+## License and research data
+
+The software and original documentation are available under the [MIT License](LICENSE).
+Scraped reports, mailing-list messages, model responses, and other third-party research
+material are not relicensed by that software license. See
+[THIRD_PARTY_DATA.md](THIRD_PARTY_DATA.md) for the data and attribution boundary.
+
 ## Adapting to a New Project
 
 1. **Scrape** your bug reports. The GitHub scraper works with any `owner/repo`. For other sources,

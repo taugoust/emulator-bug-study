@@ -145,6 +145,17 @@
             pytest tests/test_studies.py -v
             touch $out
           '';
+          software-license-boundary = pkgs.runCommand "software-license-boundary" { } ''
+            cd ${./.}
+            test -f LICENSE
+            grep -Fx "MIT License" LICENSE
+            grep -F "third-party material collected or generated for the study" THIRD_PARTY_DATA.md
+            grep -F "Scraped reports, mailing-list messages, model responses" README.md
+            for manifest in pyproject.toml lib/pyproject.toml tools/*/pyproject.toml; do
+              grep -Fx 'license = "MIT"' "$manifest"
+            done
+            touch $out
+          '';
           pyright = pkgs.runCommand "pyright" { } ''
             cd ${./.}
             ${pkgs.pyright}/bin/pyright --pythonpath ${testEnv}/bin/python
