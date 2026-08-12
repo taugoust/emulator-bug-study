@@ -22,11 +22,13 @@ nix run .#scrape -- https://github.com/owner/repo -o issues/
 nix run .#bug-classifier -- -i bugs/ -o output/
 ```
 
-Enter a development shell with all tools available:
+Enter a development shell with all local tools available:
 
 ```
 nix develop
 ```
+
+Use `nix develop .#full` when the Pi classifier backend is required.
 
 ### With uv
 
@@ -56,7 +58,7 @@ The workflow consists of three stages:
    stored as a single plain-text file containing its title and description. All scrapers also
    support `--jsonl` to emit one JSON object per line to stdout for piping between tools.
 2. **Classification** — Each bug file is fed to a classifier that assigns it to a category defined by
-   the user. Multiple backends are supported: HuggingFace zero-shot NLI, Ollama, and Anthropic.
+   the user. Multiple backends are supported: HuggingFace zero-shot NLI, Ollama, Anthropic, and Pi.
 3. **Analysis** — Helper scripts count bugs per category, compare classification runs, and
    cross-reference results.
 
@@ -126,6 +128,9 @@ bug-classifier --backend ollama --model deepseek-r1:32b --preamble data/prompts/
 
 # Anthropic API (requires ANTHROPIC_API_KEY)
 bug-classifier --backend anthropic --model claude-sonnet-4-20250514 --preamble data/prompts/classify.txt -i bugs/ -o output/
+
+# Pi coding agent (use .#bug-classifier-full so Pi is provided by Nix)
+nix run .#bug-classifier-full -- --backend pi --model claude-haiku-4-5 --preamble data/prompts/classify.txt -i bugs/ -o output/
 ```
 
 Multiple input directories can be specified by repeating `-i`.
@@ -133,7 +138,7 @@ Multiple input directories can be specified by repeating `-i`.
 Categories are configured via a TOML file or CLI flags. A QEMU configuration is included:
 
 ```
-bug-classify --config data/configs/qemu.toml --backend zero-shot -i bugs/ -o output/
+bug-classifier --config data/configs/qemu.toml --backend zero-shot -i bugs/ -o output/
 ```
 
 Alternatively, pass categories directly with `--positive`, `--negative`, and `--architectures`.
@@ -153,6 +158,21 @@ LLM mode:
 | `mode.txt` | Classify as user-mode or system-mode. |
 | `accelerator.txt` | Classify by accelerator (TCG, KVM, VMM). |
 | `user-mode.txt` | Sub-classify user-mode bugs (instruction, syscall, runtime). |
+| `box64.txt` | Classify Box64 reports (instruction, syscall, runtime, other). |
+| `angr.txt` | Classify angr reports (instruction, syscall, analysis, other). |
+
+## Study wrappers
+
+`studies/qemu.sh`, `studies/box64.sh`, and `studies/angr.sh` compose scraping,
+classification, and summary generation. Run them from `nix develop` (or
+`nix develop .#full` for the default angr Pi backend). The wrappers use
+`GITHUB_TOKEN` and `GITLAB_TOKEN` when already set; when available, `gh` or
+`glab` may supply a token. Unauthenticated API use is supported but is subject
+to upstream rate limits.
+
+These wrappers query live services and may invoke probabilistic models. They
+are refresh workflows, not deterministic verification of the frozen paper
+results.
 
 ### Analysis
 

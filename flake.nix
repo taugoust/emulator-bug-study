@@ -139,6 +139,12 @@
             ${testEnv}/bin/pytest tests/ -v
             touch $out
           '';
+          study-tool-interface = pkgs.runCommand "study-tool-interface" { } ''
+            cd ${./.}
+            export PATH=${testEnv}/bin:$PATH
+            pytest tests/test_studies.py -v
+            touch $out
+          '';
           pyright = pkgs.runCommand "pyright" { } ''
             cd ${./.}
             ${pkgs.pyright}/bin/pyright --pythonpath ${testEnv}/bin/python

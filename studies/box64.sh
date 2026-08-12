@@ -5,7 +5,9 @@ DATA_DIR="${DATA_DIR:-results/scraper}"
 OUTPUT_DIR="${OUTPUT_DIR:-results/classifier/box64-$(date +%Y%m%d)}"
 BACKEND="${BACKEND:-ollama}"
 MODEL="${MODEL:-gemma3:27b}"
-export GITHUB_TOKEN=$(gh auth token 2>/dev/null || true)
+if [[ -z "${GITHUB_TOKEN:-}" ]] && command -v gh >/dev/null 2>&1; then
+    export GITHUB_TOKEN="$(gh auth token 2>/dev/null || true)"
+fi
 
 # Scrape all Box64 GitHub issues
 scrape https://github.com/ptitSeb/box64 -o "$DATA_DIR/box64"
@@ -18,7 +20,7 @@ if [[ "$BACKEND" != "zero-shot" ]]; then
     PREAMBLE_ARGS=(--preamble data/prompts/box64.txt)
 fi
 
-bug-classify \
+bug-classifier \
     --config data/configs/box64.toml \
     --backend "$BACKEND" \
     ${MODEL:+--model "$MODEL"} \

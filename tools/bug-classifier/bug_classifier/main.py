@@ -97,7 +97,7 @@ def compare_category(
 
 def main() -> None:
     install_error_handler()
-    parser = ArgumentParser(prog='bug-classify')
+    parser = ArgumentParser(prog='bug-classifier')
     parser.add_argument('-i', '--input-dir', required=True, action='append', help="Input directory containing bug files (repeatable)")
     parser.add_argument('-o', '--output-dir', default='output', help="Output directory (default: output)")
 

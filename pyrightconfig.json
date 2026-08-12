@@ -1,5 +1,5 @@
 {
-  "include": ["tools", "lib", "tests"],
+  "include": ["tools", "lib", "tests", "bug_study_utils"],
   "typeCheckingMode": "strict",
   "reportMissingTypeStubs": "none",
   "reportUnknownMemberType": "none",

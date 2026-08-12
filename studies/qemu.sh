@@ -6,7 +6,9 @@ DATA_DIR="${DATA_DIR:-results/scraper}"
 OUTPUT_DIR="${OUTPUT_DIR:-results/classifier/$(date +%Y%m%d)}"
 BACKEND="${BACKEND:-ollama}"
 MODEL="${MODEL:-gemma3:27b}"
-export GITLAB_TOKEN=$(glab auth token 2>/dev/null || true)
+if [[ -z "${GITLAB_TOKEN:-}" ]] && command -v glab >/dev/null 2>&1; then
+    export GITLAB_TOKEN="$(glab auth token 2>/dev/null || true)"
+fi
 
 # Scrape all QEMU sources: GitLab, mailing list (April 2015 – May 2025),
 # and Launchpad (discovered automatically from mailing list references).
